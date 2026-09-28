@@ -54,7 +54,7 @@ with st.sidebar:
 if "logo_bytes" in st.session_state and st.session_state["logo_bytes"]:
     logo_bytes = st.session_state["logo_bytes"]
 
-# Cabecera
+# Cabecera principal
 col_h1, col_h2 = st.columns([1.5, 4.5])
 with col_h1:
     if logo_bytes:
@@ -76,6 +76,9 @@ PANEL_CATALOG = {
     },
     "Tier 1 580W Monocristalino (Vmp: 42.8V, Imp: 13.55A, Voc: 51.2V, Isc: 14.32A)": {
         "p_watts": 580, "vmp": 42.8, "imp": 13.55, "voc": 51.2, "isc": 14.32
+    },
+    "Tier 1 630W Alto Rendimiento (Vmp: 38.5V, Imp: 16.36A, Voc: 46.2V, Isc: 17.48A)": {
+        "p_watts": 630, "vmp": 38.5, "imp": 16.36, "voc": 46.2, "isc": 17.48
     },
     "Tier 1 660W Alto Rendimiento (Vmp: 38.3V, Imp: 17.23A, Voc: 45.9V, Isc: 18.25A)": {
         "p_watts": 660, "vmp": 38.3, "imp": 17.23, "voc": 45.9, "isc": 18.25
@@ -119,7 +122,7 @@ def seleccionar_proteccion(corriente_diseno):
             return amp
     return PROTECCIONES_ESTANDAR[-1]
 
-def calcular_calibre(corriente_diseno, longitud_m, tension_v, caida_max_pct=1.5, es_trifasico=False):
+def calcular_calibre(corriente_diseno, longitud_m, tension_v, caida_max_pct=2.0, es_trifasico=False):
     for cond in TABLA_CONDUCTORES:
         if cond["ampacidad"] >= corriente_diseno:
             factor = math.sqrt(3) if es_trifasico else 2.0
@@ -139,7 +142,7 @@ def dimensionar_tuberia(calibre, num_conductores=3):
         return '1 1/4" Conduit RMC'
 
 # ==========================================
-# GENERADORES DE PDF
+# GENERADORES DE PDF (REPORTLAB)
 # ==========================================
 def crear_pdf_solo_presupuesto(datos, logo_raw=None):
     buffer = io.BytesIO()
@@ -154,12 +157,11 @@ def crear_pdf_solo_presupuesto(datos, logo_raw=None):
     cell_bold = ParagraphStyle(name="PCellB", parent=styles["Normal"], fontSize=7.5, leading=9.5, fontName="Helvetica-Bold")
     firm_style = ParagraphStyle(name="PFirm", parent=styles["Normal"], fontSize=7.5, leading=10, alignment=1)
 
-    # Estilos de alto impacto para el bloque de ROI
     fin_lbl = ParagraphStyle(name="PFinLbl", parent=styles["Normal"], fontSize=7, textColor=colors.HexColor("#94a3b8"), alignment=1, fontName="Helvetica-Bold")
     fin_val_gold = ParagraphStyle(name="PFinValG", parent=styles["Normal"], fontSize=11, textColor=colors.HexColor("#fbbf24"), alignment=1, fontName="Helvetica-Bold")
     fin_val_white = ParagraphStyle(name="PFinValW", parent=styles["Normal"], fontSize=10, textColor=colors.white, alignment=1, fontName="Helvetica-Bold")
 
-    # 1. Encabezado con Logo y Folio/Fecha
+    # 1. Encabezado con Logo ampliado y Folio/Fecha
     logo_img = RLImage(io.BytesIO(logo_raw), width=165, height=65) if logo_raw else Paragraph("<b>ZONA ZERO</b><br/><font size=7>All Engineering Solutions</font>", t_empresa)
     header_data = [
         [logo_img,
@@ -203,7 +205,7 @@ def crear_pdf_solo_presupuesto(datos, logo_raw=None):
     story.append(tg)
     story.append(Spacer(1, 4))
 
-    # 1. BLOQUE DE ALTO IMPACTO: Análisis Energético y Retorno de Inversión
+    # 1. BLOQUE DE ALTO IMPACTO: Análisis Energético y Retorno
     story.append(Paragraph("1. Análisis Energético y Retorno de Inversión", h2_style))
     tabla_fin = [
         [Paragraph("GENERACIÓN ESTIMADA", fin_lbl), Paragraph("AHORRO BIMESTRAL", fin_lbl), Paragraph("AHORRO ANUAL ESTIMADO", fin_lbl), Paragraph("RETORNO DE INVERSIÓN", fin_lbl)],
@@ -281,7 +283,7 @@ def crear_pdf_solo_presupuesto(datos, logo_raw=None):
     ]))
     story.append(tp)
     
-    # 3 ESPACIOS AMPLIADOS HACIA ABAJO PARA DESPEGAR LAS FIRMAS
+    # Espaciado despegado para firmas
     story.append(Spacer(1, 28))
 
     firmas = [
@@ -398,7 +400,7 @@ with col_a:
 
     cliente = st.text_input("Nombre del Cliente / Empresa", value="", placeholder="Ej. Juan Pérez / Taller Industrial")
     
-    # Búsqueda de Ciudad con autocompletado solar o modo manual
+    # Selector de Ciudad o Manual
     ciudad_sel = st.selectbox("Ciudad (Búsqueda automática de HSP / Inclinación)", list(CIUDADES_SOLAR.keys()), index=0)
     
     if ciudad_sel == "Personalizado / Manual":
@@ -438,17 +440,17 @@ with col_b:
         c_pm1, c_pm2 = st.columns(2)
         with c_pm1:
             nom_mod = st.text_input("Marca / Modelo", value="", placeholder="Ej. Osda / Risen / Jinko")
-            p_watts = st.number_input("Potencia Pico Pmp (W)", min_value=0.0, value=None, placeholder="Ej. 550")
-            voc = st.number_input("Voltaje Voc (V)", min_value=0.0, value=None, placeholder="Ej. 49.8")
+            p_watts = st.number_input("Potencia Pico Pmp (W)", min_value=0.0, value=None, placeholder="Ej. 630")
+            voc = st.number_input("Voltaje Voc (V)", min_value=0.0, value=None, placeholder="Ej. 46.2")
         with c_pm2:
-            vmp = st.number_input("Voltaje Vmp (V)", min_value=0.0, value=None, placeholder="Ej. 42.1")
-            isc = st.number_input("Corriente Isc (A)", min_value=0.0, value=None, placeholder="Ej. 13.98")
-            imp = st.number_input("Corriente Imp (A)", min_value=0.0, value=None, placeholder="Ej. 13.06")
+            vmp = st.number_input("Voltaje Vmp (V)", min_value=0.0, value=None, placeholder="Ej. 38.5")
+            isc = st.number_input("Corriente Isc (A)", min_value=0.0, value=None, placeholder="Ej. 17.48")
+            imp = st.number_input("Corriente Imp (A)", min_value=0.0, value=None, placeholder="Ej. 16.36")
         
         panel_sel = f"{nom_mod} ({p_watts or 0:.0f}W)"
         p_spec = {
-            "p_watts": p_watts or 550.0, "vmp": vmp or 42.1, "imp": imp or 13.06,
-            "voc": voc or 49.8, "isc": isc or 13.98
+            "p_watts": p_watts or 630.0, "vmp": vmp or 38.5, "imp": imp or 16.36,
+            "voc": voc or 46.2, "isc": isc or 17.48
         }
 
     st.write("---")
@@ -463,8 +465,8 @@ with col_b:
         tipo_inv = st.radio("Tipo de Dispositivo", ["Microinversor", "Inversor Central"], horizontal=True)
         col_i1, col_i2 = st.columns(2)
         with col_i1:
-            inv_sel = st.text_input("Marca y Modelo", value="", placeholder="Ej. Hoymiles HMS-2000")
-            pot_ca = st.number_input("Potencia Nominal CA (Watts)", min_value=0.0, value=None, placeholder="Ej. 2000")
+            inv_sel = st.text_input("Marca y Modelo", value="", placeholder="Ej. Growatt MIN 3000TL-X")
+            pot_ca = st.number_input("Potencia Nominal CA (Watts)", min_value=0.0, value=None, placeholder="Ej. 3000")
             vac_in = st.selectbox("Tensión CA (V)", [220, 127, 440], index=0)
             fases_in = st.selectbox("Fases CA", [2, 1, 3], index=0)
         with col_i2:
@@ -477,7 +479,7 @@ with col_b:
 
         i_spec = {
             "tipo": "micro" if tipo_inv == "Microinversor" else "central",
-            "potencia": pot_ca or 2000.0,
+            "potencia": pot_ca or 3000.0,
             "vac": vac_in,
             "fases": fases_in,
             "modulos_max": mod_max,
@@ -504,7 +506,7 @@ campos_listos = (consumo_bim is not None and consumo_bim > 0 and
                  dist_ca is not None)
 
 if not campos_listos:
-    st.info("👋 Ingresa el consumo bimestral, el costo de kWh y la distancia de CA para realizar el cálculo.")
+    st.info("👋 Ingresa el consumo bimestral, las HSP y la distancia de CA para realizar el cálculo.")
 else:
     # 1. Dimensionamiento Solar
     consumo_diario = consumo_bim / 60.0
@@ -519,7 +521,7 @@ else:
     ahorro_bimestral = min(gen_bimestral, consumo_bim) * precio_kwh_calc
     ahorro_anual = ahorro_bimestral * 6
 
-    # 3. Topología e Inversores
+    # 3. Topología y Lógica Eléctrica Corregida
     if i_spec["tipo"] == "micro":
         topologia = "Microinversores"
         n_inversores = math.ceil(n_paneles / i_spec["modulos_max"])
@@ -532,16 +534,15 @@ else:
         prot_cd = "Integrada en Micro"
         tub_cd = "Sin canalización CD (Techo)"
         caida_cd = 0.2
-   else:
+    else:
         topologia = "Inversor Central"
         n_inversores = 1
         vac = i_spec["vac"]
         fases = i_spec.get("fases", 2)
         es_tri = (fases == 3)
         
-        # LÓGICA INTELIGENTE DE STRINGS:
-        # Si la serie completa no rebasa 500V Voc, se mantiene en 1 SOLO STRING
-        # para asegurar que el voltaje entre perfecto en la ventana MPPT.
+        # LÓGICA DE STRINGS:
+        # Si son <= 8 paneles o Voc total <= 450V, van en 1 solo String para asegurar la ventana MPPT
         voc_total_est = n_paneles * p_spec["voc"]
         if n_paneles <= 8 or voc_total_est <= 450.0:
             strings = 1
@@ -552,15 +553,13 @@ else:
             paneles_por_string = math.ceil(n_paneles / 2)
             config_strings = f"2 Strings ({paneles_por_string} módulos c/u en serie)"
 
-        # Corriente por string (NOM-001 Art. 690-8: Isc * 1.25 * 1.25)
+        # Corriente por serie (NOM-001 Art. 690-8: Isc * 1.25 * 1.25)
         i_diseno_string = p_spec["isc"] * 1.25 * 1.25
         prot_cd_amp = seleccionar_proteccion(i_diseno_string)
         prot_cd = f"{prot_cd_amp}A Fusible CD (1000V)"
         
-        # Voltaje real del string para el cálculo de caída de tensión
         v_string = paneles_por_string * p_spec["vmp"]
         dist_cd_calc = dist_cd if (dist_cd is not None and dist_cd > 0) else 15.0
-        
         cal_cd_calc, caida_cd = calcular_calibre(i_diseno_string, dist_cd_calc, v_string, caida_max_pct=2.0, es_trifasico=False)
         cal_cd = f"{cal_cd_calc} PV-Wire ({strings} par{'es' if strings > 1 else ''})"
         tub_cd = dimensionar_tuberia(cal_cd_calc, num_conductores=strings * 2)
@@ -576,7 +575,7 @@ else:
     prot_ca_amp = seleccionar_proteccion(i_diseno_ca)
     prot_ca = f"{prot_ca_amp}A Termomagnético ({fases}P)"
     cal_ca, caida_ca = calcular_calibre(i_diseno_ca, dist_ca, vac, caida_max_pct=2.0, es_trifasico=es_tri)
-    tub_ca = dimensionar_tuberia(cal_ca, num_conductores=fases+1)
+    tub_ca = dimensionar_tuberia(cal_ca, num_conductores=fases + 1)
 
     # 5. Inversión y ROI
     subtotal = subtotal_manual if (subtotal_manual is not None and subtotal_manual > 0) else (kwp_real * 1000 * 21.5 / 1.16)
