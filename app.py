@@ -11,9 +11,30 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 st.set_page_config(page_title="CALCULADORA FV ZONA ZERO", layout="wide", page_icon="☀️")
 
 # ==========================================
+# BASE DE DATOS DE RADIACIÓN SOLAR (HSP Y LATITUD)
+# ==========================================
+CIUDADES_SOLAR = {
+    "Saltillo, Coahuila": {"hsp": 5.6, "inc": 25.4},
+    "Ramos Arizpe, Coahuila": {"hsp": 5.6, "inc": 25.5},
+    "Arteaga, Coahuila": {"hsp": 5.5, "inc": 25.4},
+    "Torreón, Coahuila": {"hsp": 5.9, "inc": 25.5},
+    "Monclova, Coahuila": {"hsp": 5.5, "inc": 26.9},
+    "Piedras Negras, Coahuila": {"hsp": 5.3, "inc": 28.7},
+    "Monterrey, Nuevo León": {"hsp": 5.2, "inc": 25.6},
+    "San Pedro Garza García, NL": {"hsp": 5.2, "inc": 25.6},
+    "Guadalajara, Jalisco": {"hsp": 5.7, "inc": 20.6},
+    "Ciudad de México (CDMX)": {"hsp": 5.0, "inc": 19.4},
+    "Querétaro, Querétaro": {"hsp": 5.5, "inc": 20.6},
+    "San Luis Potosí, SLP": {"hsp": 5.7, "inc": 22.1},
+    "Hermosillo, Sonora": {"hsp": 6.2, "inc": 29.0},
+    "Chihuahua, Chihuahua": {"hsp": 5.8, "inc": 28.6},
+    "Mérida, Yucatán": {"hsp": 5.3, "inc": 20.9},
+    "Personalizado / Manual": {"hsp": 5.5, "inc": 25.0}
+}
+
+# ==========================================
 # GESTIÓN PERMANENTE DEL LOGOTIPO
 # ==========================================
-# Carga automática del logo local (logo.png / logo.jpg en el repositorio)
 logo_bytes = None
 for default_logo in ["logo.png", "logo.jpg", "logo.jpeg"]:
     if os.path.exists(default_logo):
@@ -24,7 +45,7 @@ for default_logo in ["logo.png", "logo.jpg", "logo.jpeg"]:
 with st.sidebar:
     st.header("🏢 Identidad de Marca")
     if logo_bytes is not None:
-        st.success("Logotipo base cargado automáticamente desde repositorio.")
+        st.success("Logotipo base cargado automáticamente.")
     logo_file = st.file_uploader("Reemplazar logotipo temporalmente (PNG/JPG)", type=["png", "jpg", "jpeg"])
     if logo_file is not None:
         logo_bytes = logo_file.read()
@@ -33,13 +54,13 @@ with st.sidebar:
 if "logo_bytes" in st.session_state and st.session_state["logo_bytes"]:
     logo_bytes = st.session_state["logo_bytes"]
 
-# Cabecera principal de la aplicación
+# Cabecera
 col_h1, col_h2 = st.columns([1.5, 4.5])
 with col_h1:
     if logo_bytes:
         st.image(logo_bytes, width=240)
     else:
-        st.info("Coloca 'logo.png' en tu repositorio de GitHub para cargarlo siempre en automático.")
+        st.info("Coloca 'logo.png' en GitHub para cargarlo fijo.")
 with col_h2:
     st.title("CALCULADORA FV ZONA ZERO")
     st.caption("All Engineering Solutions | Dimensionamiento Solar, NOM-001 Art. 690 y Presupuestos")
@@ -122,21 +143,24 @@ def dimensionar_tuberia(calibre, num_conductores=3):
 # ==========================================
 def crear_pdf_solo_presupuesto(datos, logo_raw=None):
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=30, bottomMargin=30)
+    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=26, bottomMargin=26)
     story = []
     styles = getSampleStyleSheet()
 
     t_empresa = ParagraphStyle(name="PEmp", parent=styles["Heading1"], fontSize=16, textColor=colors.HexColor("#0f172a"), spaceAfter=2)
-    s_empresa = ParagraphStyle(name="PSub", parent=styles["Normal"], fontSize=8, textColor=colors.HexColor("#475569"))
     fol_style = ParagraphStyle(name="PFol", parent=styles["Normal"], fontSize=8.5, textColor=colors.HexColor("#0f172a"), alignment=2, leading=11)
     h2_style = ParagraphStyle(name="PH2", parent=styles["Heading2"], fontSize=9.5, textColor=colors.HexColor("#1e3a8a"), spaceBefore=4, spaceAfter=2)
     cell_style = ParagraphStyle(name="PCell", parent=styles["Normal"], fontSize=7.5, leading=9.5)
     cell_bold = ParagraphStyle(name="PCellB", parent=styles["Normal"], fontSize=7.5, leading=9.5, fontName="Helvetica-Bold")
     firm_style = ParagraphStyle(name="PFirm", parent=styles["Normal"], fontSize=7.5, leading=10, alignment=1)
 
-    # 1. Encabezado con Logo Ampliado a la izquierda y Folio/Fecha a la derecha
-    logo_img = RLImage(io.BytesIO(logo_raw), width=160, height=65) if logo_raw else Paragraph("<b>ZONA ZERO</b><br/><font size=7>All Engineering Solutions</font>", t_empresa)
-    
+    # Estilos de alto impacto para el bloque de ROI
+    fin_lbl = ParagraphStyle(name="PFinLbl", parent=styles["Normal"], fontSize=7, textColor=colors.HexColor("#94a3b8"), alignment=1, fontName="Helvetica-Bold")
+    fin_val_gold = ParagraphStyle(name="PFinValG", parent=styles["Normal"], fontSize=11, textColor=colors.HexColor("#fbbf24"), alignment=1, fontName="Helvetica-Bold")
+    fin_val_white = ParagraphStyle(name="PFinValW", parent=styles["Normal"], fontSize=10, textColor=colors.white, alignment=1, fontName="Helvetica-Bold")
+
+    # 1. Encabezado con Logo y Folio/Fecha
+    logo_img = RLImage(io.BytesIO(logo_raw), width=165, height=65) if logo_raw else Paragraph("<b>ZONA ZERO</b><br/><font size=7>All Engineering Solutions</font>", t_empresa)
     header_data = [
         [logo_img,
          Paragraph(f"<b>ZONA ZERO 'ALL ENGINEERING SOLUTIONS'</b><br/>"
@@ -150,7 +174,7 @@ def crear_pdf_solo_presupuesto(datos, logo_raw=None):
         ('BOTTOMPADDING', (0,0), (-1,-1), 2),
     ]))
     story.append(th)
-    story.append(Spacer(1, 4))
+    story.append(Spacer(1, 3))
 
     # Franja de Título
     story.append(Table([[Paragraph("<font color='white'><b>COTIZACIÓN COMERCIAL - SISTEMA FOTOVOLTAICO INTERCONECTADO</b></font>", cell_bold)]],
@@ -179,30 +203,36 @@ def crear_pdf_solo_presupuesto(datos, logo_raw=None):
     story.append(tg)
     story.append(Spacer(1, 4))
 
-    # Análisis Energético y Retorno
+    # 1. BLOQUE DE ALTO IMPACTO: Análisis Energético y Retorno de Inversión
     story.append(Paragraph("1. Análisis Energético y Retorno de Inversión", h2_style))
     tabla_fin = [
-        [Paragraph("<b>Generación Bimestral Est.</b>", cell_bold), Paragraph("<b>Ahorro Bimestral Estimado</b>", cell_bold), Paragraph("<b>Ahorro Anual Estimado</b>", cell_bold), Paragraph("<b>Tiempo de Retorno (ROI)</b>", cell_bold)],
-        [Paragraph(f"{datos['gen_bimestral']:,.0f} kWh", cell_style), Paragraph(f"${datos['ahorro_bim']:,.2f} MXN", cell_style), Paragraph(f"${datos['ahorro_anual']:,.2f} MXN", cell_style), Paragraph(f"<b>{datos['roi']:.1f} años</b>", cell_bold)]
+        [Paragraph("GENERACIÓN ESTIMADA", fin_lbl), Paragraph("AHORRO BIMESTRAL", fin_lbl), Paragraph("AHORRO ANUAL ESTIMADO", fin_lbl), Paragraph("RETORNO DE INVERSIÓN", fin_lbl)],
+        [Paragraph(f"{datos['gen_bimestral']:,.0f} kWh/bim", fin_val_white),
+         Paragraph(f"${datos['ahorro_bim']:,.2f} MXN", fin_val_gold),
+         Paragraph(f"${datos['ahorro_anual']:,.2f} MXN", fin_val_gold),
+         Paragraph(f"{datos['roi']:.1f} AÑOS", fin_val_gold)]
     ]
     tfin = Table(tabla_fin, colWidths=[135, 135, 135, 135])
     tfin.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#f1f5f9")),
-        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#cbd5e1")),
+        ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#0f172a")),
         ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-        ('TOPPADDING', (0,0), (-1,-1), 2.5),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('TOPPADDING', (0,0), (-1,0), 3.5),
+        ('BOTTOMPADDING', (0,0), (-1,0), 1),
+        ('TOPPADDING', (0,1), (-1,1), 1),
+        ('BOTTOMPADDING', (0,1), (-1,1), 4.5),
+        ('LINEAFTER', (0,0), (2,-1), 0.5, colors.HexColor("#334155")),
     ]))
     story.append(tfin)
     story.append(Spacer(1, 4))
 
-    # Equipamiento Principal
+    # 2. Equipamiento Principal
     story.append(Paragraph("2. Equipamiento Seleccionado", h2_style))
     tabla_eq = [
         [Paragraph("<b>Concepto</b>", cell_bold), Paragraph("<b>Descripción Técnica</b>", cell_bold), Paragraph("<b>Cant.</b>", cell_bold)],
         [Paragraph("Módulos Solares", cell_style), Paragraph(str(datos['panel_nombre']), cell_style), Paragraph(f"{datos['n_paneles']}", cell_style)],
         [Paragraph("Inversión / Conversión", cell_style), Paragraph(f"{datos['inv_nombre']} ({datos['topologia']})", cell_style), Paragraph(f"{datos['n_inversores']}", cell_style)],
-        [Paragraph("Estructura de Montaje", cell_style), Paragraph("Aluminio anodizado AL6005-T5 con fijaciones y tornillería de acero inoxidable", cell_style), Paragraph("1 Lote", cell_style)]
+        [Paragraph("Estructura de Montaje", cell_style), Paragraph("Aluminio anodizado AL6005-T5 con tornillería de acero inoxidable", cell_style), Paragraph("1 Lote", cell_style)]
     ]
     te = Table(tabla_eq, colWidths=[130, 360, 50])
     te.setStyle(TableStyle([
@@ -215,14 +245,14 @@ def crear_pdf_solo_presupuesto(datos, logo_raw=None):
     story.append(te)
     story.append(Spacer(1, 4))
 
-    # Alcance
+    # 3. Alcance
     story.append(Paragraph("3. Alcance del Proyecto Llave en Mano", h2_style))
     alcances = [
         [Paragraph("• Suministro y montaje mecánico de módulos fotovoltaicos e inversores.", cell_style)],
-        [Paragraph("• Cableado solar fotovoltaico CD (PV Wire) o troncal CA en tubería Conduit según NOM-001-SEDE-2012.", cell_style)],
+        [Paragraph("• Cableado solar fotovoltaico CD (PV Wire) o troncal CA en tubería Conduit bajo NOM-001-SEDE-2012.", cell_style)],
         [Paragraph("• Gabinete de protección con interruptores termomagnéticos y supresor de transitorios (DPS).", cell_style)],
         [Paragraph("• Sistema de puesta a tierra equipotencial con electrodo de cobre y conectores certificados.", cell_style)],
-        [Paragraph("• Trámites de interconexión con CFE y pruebas de puesta en marcha del sistema.", cell_style)]
+        [Paragraph("• Trámites de interconexión con CFE y pruebas de comisionamiento y puesta en marcha.", cell_style)]
     ]
     ta = Table(alcances, colWidths=[540])
     ta.setStyle(TableStyle([
@@ -232,7 +262,7 @@ def crear_pdf_solo_presupuesto(datos, logo_raw=None):
     story.append(ta)
     story.append(Spacer(1, 4))
 
-    # Resumen de Inversión
+    # 4. Inversión
     story.append(Paragraph("4. Resumen de Inversión", h2_style))
     tabla_precios = [
         [Paragraph("<b>CONCEPTO</b>", cell_bold), Paragraph("<b>MONTO (MXN)</b>", cell_bold)],
@@ -250,9 +280,10 @@ def crear_pdf_solo_presupuesto(datos, logo_raw=None):
         ('BACKGROUND', (0,-1), (-1,-1), colors.HexColor("#f8fafc")),
     ]))
     story.append(tp)
-    story.append(Spacer(1, 14))
+    
+    # 3 ESPACIOS AMPLIADOS HACIA ABAJO PARA DESPEGAR LAS FIRMAS
+    story.append(Spacer(1, 28))
 
-    # Líneas de Firma y Aceptación perfectamente centradas
     firmas = [
         [Paragraph("____________________________________________<br/><b>Zona Zero 'All Engineering Solutions'</b><br/>Ingeniería y Proyectos", firm_style),
          Paragraph(f"____________________________________________<br/><b>Aceptación del Cliente</b><br/>Fecha: {datos['fecha']} | Firma", firm_style)]
@@ -305,7 +336,6 @@ def crear_pdf_memoria_tecnica(datos, logo_raw=None):
     story.append(Spacer(1, 6))
 
     story.append(Paragraph("2. Memoria de Cálculo de Conductores y Protecciones (NOM-001 Art. 690)", h2_style))
-    
     tabla_elec = [
         [Paragraph("<b>Circuito</b>", cell_bold),
          Paragraph("<b>Conductor</b>", cell_bold),
@@ -367,13 +397,24 @@ with col_a:
         fecha_doc = st.date_input("Fecha de Emisión", value=date.today())
 
     cliente = st.text_input("Nombre del Cliente / Empresa", value="", placeholder="Ej. Juan Pérez / Taller Industrial")
-    ciudad = st.text_input("Ciudad / Ubicación", value="", placeholder="Ej. Saltillo, Coahuila")
+    
+    # Búsqueda de Ciudad con autocompletado solar o modo manual
+    ciudad_sel = st.selectbox("Ciudad (Búsqueda automática de HSP / Inclinación)", list(CIUDADES_SOLAR.keys()), index=0)
+    
+    if ciudad_sel == "Personalizado / Manual":
+        ciudad_nombre = st.text_input("Escribe el nombre de la Ciudad", value="", placeholder="Ej. Piedras Negras, Coahuila")
+        default_hsp = 5.5
+        default_inc = 25.0
+    else:
+        ciudad_nombre = ciudad_sel
+        default_hsp = CIUDADES_SOLAR[ciudad_sel]["hsp"]
+        default_inc = CIUDADES_SOLAR[ciudad_sel]["inc"]
 
     c1, c2 = st.columns(2)
     with c1:
-        hsp = st.number_input("Horas Solares Pico (HSP)", min_value=0.0, max_value=10.0, value=None, placeholder="Ej. 5.6")
+        hsp = st.number_input("Horas Solares Pico (HSP)", min_value=0.0, max_value=10.0, value=float(default_hsp), step=0.1)
     with c2:
-        inclinacion = st.number_input("Inclinación de Paneles (°)", min_value=0.0, max_value=90.0, value=None, placeholder="Ej. 25.0")
+        inclinacion = st.number_input("Inclinación de Paneles (°)", min_value=0.0, max_value=90.0, value=float(default_inc), step=1.0)
 
     rpu = st.text_input("No. de Servicio CFE / RPU", value="", placeholder="Ej. 012345678901")
     servicio_ca = st.selectbox("Tipo de Acometida CA", ["Bifásico 2F-3H (220V/127V)", "Monofásico 1F-2H (127V)", "Trifásico 3F-4H (220V/127V)"])
@@ -463,7 +504,7 @@ campos_listos = (consumo_bim is not None and consumo_bim > 0 and
                  dist_ca is not None)
 
 if not campos_listos:
-    st.info("👋 Ingresa el consumo bimestral, las HSP y la distancia de CA para calcular el sistema.")
+    st.info("👋 Ingresa el consumo bimestral, el costo de kWh y la distancia de CA para realizar el cálculo.")
 else:
     # 1. Dimensionamiento Solar
     consumo_diario = consumo_bim / 60.0
@@ -549,7 +590,7 @@ else:
         "folio": folio_doc if folio_doc else "S/F",
         "fecha": fecha_doc.strftime("%d/%m/%Y") if fecha_doc else date.today().strftime("%d/%m/%Y"),
         "cliente": cliente if cliente else "Sin especificar",
-        "ciudad": ciudad if ciudad else "Sin especificar",
+        "ciudad": ciudad_nombre if ciudad_nombre else "Sin especificar",
         "rpu": rpu if rpu else "Sin especificar",
         "hsp": hsp, "inclinacion": inclinacion if inclinacion else 25.0,
         "kwp": kwp_real, "n_paneles": n_paneles, "panel_nombre": panel_sel, "inv_nombre": inv_sel,
