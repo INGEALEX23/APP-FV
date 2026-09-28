@@ -20,7 +20,6 @@ with st.sidebar:
 
 logo_bytes = st.session_state.get("logo_bytes", None)
 
-# Cabecera principal
 col_h1, col_h2 = st.columns([1.5, 4.5])
 with col_h1:
     if logo_bytes:
@@ -34,35 +33,35 @@ with col_h2:
 st.divider()
 
 # ==========================================
-# CATÁLOGOS BASE Y TABLAS NOM-001-SEDE-2012
+# CATÁLOGOS BASE Y TABLAS NOM-001
 # ==========================================
 PANEL_CATALOG = {
     "Osda 550W Bifacial (Vmp: 42.1V, Imp: 13.06A, Voc: 49.8V, Isc: 13.98A)": {
-        "p_watts": 550, "vmp": 42.1, "imp": 13.06, "voc": 49.8, "isc": 13.98, "temp_coeff_voc": -0.28
+        "p_watts": 550, "vmp": 42.1, "imp": 13.06, "voc": 49.8, "isc": 13.98
     },
     "Tier 1 580W Monocristalino (Vmp: 42.8V, Imp: 13.55A, Voc: 51.2V, Isc: 14.32A)": {
-        "p_watts": 580, "vmp": 42.8, "imp": 13.55, "voc": 51.2, "isc": 14.32, "temp_coeff_voc": -0.27
+        "p_watts": 580, "vmp": 42.8, "imp": 13.55, "voc": 51.2, "isc": 14.32
     },
     "Tier 1 660W Alto Rendimiento (Vmp: 38.3V, Imp: 17.23A, Voc: 45.9V, Isc: 18.25A)": {
-        "p_watts": 660, "vmp": 38.3, "imp": 17.23, "voc": 45.9, "isc": 18.25, "temp_coeff_voc": -0.26
+        "p_watts": 660, "vmp": 38.3, "imp": 17.23, "voc": 45.9, "isc": 18.25
     }
 }
 
 INVERTER_CATALOG = {
-    "Microinversor Hoymiles HMS-2000-4T (4 MPPT, 2000W, 220V CA)": {
-        "tipo": "micro", "potencia": 2000, "vac": 220, "modulos_max": 4, "fases": 2, "eficiencia": 0.965
+    "Microinversor Hoymiles HMS-2000-4T (4 MPPT Indep, 2000W, 220V CA)": {
+        "tipo": "micro", "potencia": 2000, "vac": 220, "modulos_max": 4, "fases": 2, "mppt_count": 4
     },
     "Microinversor Hoymiles HMT-2250-6T (Trifásico 220V CA, 2250W)": {
-        "tipo": "micro", "potencia": 2250, "vac": 220, "modulos_max": 6, "fases": 3, "eficiencia": 0.965
+        "tipo": "micro", "potencia": 2250, "vac": 220, "modulos_max": 6, "fases": 3, "mppt_count": 3
     },
     "Inversor Central Growatt MIN 3000TL-X (220V, 2 MPPT, 3000W)": {
-        "tipo": "central", "potencia": 3000, "vac": 220, "fases": 2, "v_mppt_min": 80, "v_mppt_max": 500, "voc_max": 550, "eficiencia": 0.975
+        "tipo": "central", "potencia": 3000, "vac": 220, "fases": 2, "mppt_count": 2
     },
     "Inversor Central Growatt MIN 6000TL-X (220V, 2 MPPT, 6000W)": {
-        "tipo": "central", "potencia": 6000, "vac": 220, "fases": 2, "v_mppt_min": 80, "v_mppt_max": 500, "voc_max": 550, "eficiencia": 0.975
+        "tipo": "central", "potencia": 6000, "vac": 220, "fases": 2, "mppt_count": 2
     },
     "Inversor Central Solis 10kW Trifásico (3F 220V CA, 10000W)": {
-        "tipo": "central", "potencia": 10000, "vac": 220, "fases": 3, "v_mppt_min": 160, "v_mppt_max": 850, "voc_max": 1000, "eficiencia": 0.98
+        "tipo": "central", "potencia": 10000, "vac": 220, "fases": 3, "mppt_count": 2
     }
 }
 
@@ -96,16 +95,16 @@ def calcular_calibre(corriente_diseno, longitud_m, tension_v, caida_max_pct=1.5,
                 return cond["calibre"], caida_pct
     return TABLA_CONDUCTORES[-1]["calibre"], 2.0
 
-def dimensionar_tuberia(calibre):
+def dimensionar_tuberia(calibre, num_conductores=3):
     if calibre in ["14 AWG", "12 AWG", "10 AWG"]:
-        return '3/4" Conduit EMT'
+        return '3/4" Conduit EMT' if num_conductores <= 4 else '1" Conduit EMT'
     elif calibre in ["8 AWG", "6 AWG"]:
         return '1" Conduit EMT'
     else:
         return '1 1/4" Conduit RMC'
 
 # ==========================================
-# GENERADORES DE PDF (REPORTLAB)
+# GENERADORES DE PDF
 # ==========================================
 def crear_pdf_solo_presupuesto(datos, logo_raw=None):
     buffer = io.BytesIO()
@@ -113,16 +112,15 @@ def crear_pdf_solo_presupuesto(datos, logo_raw=None):
     story = []
     styles = getSampleStyleSheet()
 
-    t_empresa = ParagraphStyle(name="PEmp", parent=styles["Heading1"], fontSize=17, textColor=colors.HexColor("#0f172a"), spaceAfter=2)
+    t_empresa = ParagraphStyle(name="PEmp", parent=styles["Heading1"], fontSize=16, textColor=colors.HexColor("#0f172a"), spaceAfter=2)
     s_empresa = ParagraphStyle(name="PSub", parent=styles["Normal"], fontSize=8, textColor=colors.HexColor("#475569"))
-    h2_style = ParagraphStyle(name="PH2", parent=styles["Heading2"], fontSize=10, textColor=colors.HexColor("#1e3a8a"), spaceBefore=6, spaceAfter=4)
+    h2_style = ParagraphStyle(name="PH2", parent=styles["Heading2"], fontSize=10, textColor=colors.HexColor("#1e3a8a"), spaceBefore=5, spaceAfter=3)
     cell_style = ParagraphStyle(name="PCell", parent=styles["Normal"], fontSize=7.5, leading=9.5)
     cell_bold = ParagraphStyle(name="PCellB", parent=styles["Normal"], fontSize=7.5, leading=9.5, fontName="Helvetica-Bold")
 
-    # Cabecera con Logotipo
     logo_img = RLImage(io.BytesIO(logo_raw), width=130, height=45) if logo_raw else Paragraph("<b>ZONA ZERO</b>", t_empresa)
     info_header = [
-        [logo_img, Paragraph("<b>ZONA ZERO 'ALL ENGINEERING SOLUTIONS'</b><br/>Saltillo, Coahuila | Instalaciones Fotovoltaicas y Eléctricas<br/>Tel / WhatsApp de Contacto", s_empresa)]
+        [logo_img, Paragraph("<b>ZONA ZERO 'ALL ENGINEERING SOLUTIONS'</b><br/>Saltillo, Coahuila | Instalaciones Fotovoltaicas, HVAC y Eléctricas", s_empresa)]
     ]
     th = Table(info_header, colWidths=[150, 390])
     th.setStyle(TableStyle([
@@ -132,72 +130,86 @@ def crear_pdf_solo_presupuesto(datos, logo_raw=None):
     story.append(th)
     story.append(Spacer(1, 4))
 
-    # Franja de Título
     story.append(Table([[Paragraph("<font color='white'><b>COTIZACIÓN COMERCIAL - SISTEMA FOTOVOLTAICO INTERCONECTADO</b></font>", cell_bold)]],
                        colWidths=[540],
                        style=[('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#1e3a8a")),
                               ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-                              ('TOPPADDING', (0,0), (-1,-1), 4),
-                              ('BOTTOMPADDING', (0,0), (-1,-1), 4)]))
-    story.append(Spacer(1, 6))
+                              ('TOPPADDING', (0,0), (-1,-1), 3),
+                              ('BOTTOMPADDING', (0,0), (-1,-1), 3)]))
+    story.append(Spacer(1, 4))
 
-    # Datos Generales
     datos_gen = [
         [Paragraph("<b>Cliente:</b>", cell_bold), Paragraph(str(datos['cliente']), cell_style),
          Paragraph("<b>Ubicación:</b>", cell_bold), Paragraph(str(datos['ciudad']), cell_style)],
         [Paragraph("<b>Servicio / RPU:</b>", cell_bold), Paragraph(str(datos['rpu']), cell_style),
-         Paragraph("<b>Tensión CA:</b>", cell_bold), Paragraph(f"{datos['vac']}V", cell_style)],
+         Paragraph("<b>Tensión CA:</b>", cell_bold), Paragraph(f"{datos['vac']}V ({datos['fases']} Fases)", cell_style)],
         [Paragraph("<b>Potencia Total:</b>", cell_bold), Paragraph(f"<b>{datos['kwp']:.2f} kWp</b>", cell_style),
          Paragraph("<b>No. Módulos:</b>", cell_bold), Paragraph(f"{datos['n_paneles']} piezas", cell_style)]
     ]
     tg = Table(datos_gen, colWidths=[90, 180, 90, 180])
     tg.setStyle(TableStyle([
         ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#cbd5e1")),
+        ('TOPPADDING', (0,0), (-1,-1), 2.5),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
+    ]))
+    story.append(tg)
+    story.append(Spacer(1, 4))
+
+    # Beneficios Financieros
+    story.append(Paragraph("1. Análisis Energético y Retorno de Inversión", h2_style))
+    tabla_fin = [
+        [Paragraph("<b>Generación Bimestral Est.</b>", cell_bold), Paragraph("<b>Ahorro Bimestral Estimado</b>", cell_bold), Paragraph("<b>Ahorro Anual Estimado</b>", cell_bold), Paragraph("<b>Tiempo de Retorno (ROI)</b>", cell_bold)],
+        [Paragraph(f"{datos['gen_bimestral']:,.0f} kWh", cell_style), Paragraph(f"${datos['ahorro_bim']:,.2f} MXN", cell_style), Paragraph(f"${datos['ahorro_anual']:,.2f} MXN", cell_style), Paragraph(f"<b>{datos['roi']:.1f} años</b>", cell_bold)]
+    ]
+    tfin = Table(tabla_fin, colWidths=[135, 135, 135, 135])
+    tfin.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#f1f5f9")),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#cbd5e1")),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
         ('TOPPADDING', (0,0), (-1,-1), 3),
         ('BOTTOMPADDING', (0,0), (-1,-1), 3),
     ]))
-    story.append(tg)
-    story.append(Spacer(1, 6))
+    story.append(tfin)
+    story.append(Spacer(1, 4))
 
     # Equipamiento Principal
-    story.append(Paragraph("1. Equipamiento Seleccionado", h2_style))
+    story.append(Paragraph("2. Equipamiento Seleccionado", h2_style))
     tabla_eq = [
         [Paragraph("<b>Concepto</b>", cell_bold), Paragraph("<b>Descripción Técnica</b>", cell_bold), Paragraph("<b>Cant.</b>", cell_bold)],
         [Paragraph("Módulos Solares", cell_style), Paragraph(str(datos['panel_nombre']), cell_style), Paragraph(f"{datos['n_paneles']}", cell_style)],
         [Paragraph("Inversión / Conversión", cell_style), Paragraph(f"{datos['inv_nombre']} ({datos['topologia']})", cell_style), Paragraph(f"{datos['n_inversores']}", cell_style)],
-        [Paragraph("Estructura de Montaje", cell_style), Paragraph("Aluminio anodizado AL6005-T5 con tornillería de acero inoxidable", cell_style), Paragraph("1 Lote", cell_style)]
+        [Paragraph("Estructura de Montaje", cell_style), Paragraph("Aluminio anodizado AL6005-T5 con fijaciones y tornillería de acero inoxidable", cell_style), Paragraph("1 Lote", cell_style)]
     ]
     te = Table(tabla_eq, colWidths=[130, 360, 50])
     te.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#f1f5f9")),
         ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#cbd5e1")),
-        ('TOPPADDING', (0,0), (-1,-1), 3),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+        ('TOPPADDING', (0,0), (-1,-1), 2.5),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
         ('ALIGN', (2,0), (2,-1), 'CENTER')
     ]))
     story.append(te)
-    story.append(Spacer(1, 6))
+    story.append(Spacer(1, 4))
 
-    # Alcance del Suministro
-    story.append(Paragraph("2. Alcance del Proyecto Llave en Mano", h2_style))
+    # Alcance
+    story.append(Paragraph("3. Alcance del Proyecto Llave en Mano", h2_style))
     alcances = [
-        [Paragraph("• Suministro y montaje de paneles solares fotovoltaicos y micro/inversores seleccionados.", cell_style)],
-        [Paragraph("• Estructura de aluminio para montaje en losa o cubierta con fijaciones herméticas.", cell_style)],
-        [Paragraph("• Sistema de canalización conduit y cableado eléctrico en CD y CA bajo normativa NOM-001-SEDE-2012.", cell_style)],
-        [Paragraph("• Centro de carga de protección con interruptores termomagnéticos y supresor de transitorios (DPS).", cell_style)],
-        [Paragraph("• Sistema de puesta a tierra integral equipotencial con electrodo y conductor de puesta a tierra.", cell_style)],
-        [Paragraph("• Pruebas de continuidad, aislamiento, comisionamiento del sistema y entrega de carpeta técnica para CFE.", cell_style)]
+        [Paragraph("• Suministro y montaje mecánico de módulos fotovoltaicos e inversores.", cell_style)],
+        [Paragraph("• Cableado solar fotovoltaico CD (PV Wire) o troncal CA en tubería Conduit según NOM-001-SEDE-2012.", cell_style)],
+        [Paragraph("• Gabinete de protección con interruptores termomagnéticos y supresor de transitorios (DPS).", cell_style)],
+        [Paragraph("• Sistema de puesta a tierra equipotencial con electrodo de cobre y conectores certificados.", cell_style)],
+        [Paragraph("• Trámites de interconexión con CFE y pruebas de puesta en marcha del sistema.", cell_style)]
     ]
     ta = Table(alcances, colWidths=[540])
     ta.setStyle(TableStyle([
-        ('TOPPADDING', (0,0), (-1,-1), 1.5),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 1.5),
+        ('TOPPADDING', (0,0), (-1,-1), 1),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 1),
     ]))
     story.append(ta)
-    story.append(Spacer(1, 6))
+    story.append(Spacer(1, 4))
 
-    # Inversión Económica
-    story.append(Paragraph("3. Resumen de Inversión", h2_style))
+    # Inversión
+    story.append(Paragraph("4. Resumen de Inversión", h2_style))
     tabla_precios = [
         [Paragraph("<b>CONCEPTO</b>", cell_bold), Paragraph("<b>MONTO (MXN)</b>", cell_bold)],
         [Paragraph("SUBTOTAL", cell_bold), Paragraph(f"${datos['subtotal']:,.2f}", cell_bold)],
@@ -209,14 +221,13 @@ def crear_pdf_solo_presupuesto(datos, logo_raw=None):
         ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#e2e8f0")),
         ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#cbd5e1")),
         ('ALIGN', (1,0), (1,-1), 'RIGHT'),
-        ('TOPPADDING', (0,0), (-1,-1), 4),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+        ('TOPPADDING', (0,0), (-1,-1), 3),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
         ('BACKGROUND', (0,-1), (-1,-1), colors.HexColor("#f8fafc")),
     ]))
     story.append(tp)
-    story.append(Spacer(1, 14))
+    story.append(Spacer(1, 10))
 
-    # Líneas de Firma
     firmas = [
         [Paragraph("________________________________________<br/><b>Zona Zero 'All Engineering Solutions'</b><br/>Ingeniería y Proyectos", cell_style),
          Paragraph("________________________________________<br/><b>Aceptación del Cliente</b><br/>Firma y Fecha", cell_style)]
@@ -224,7 +235,7 @@ def crear_pdf_solo_presupuesto(datos, logo_raw=None):
     tf = Table(firmas, colWidths=[270, 270])
     tf.setStyle(TableStyle([
         ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-        ('TOPPADDING', (0,0), (-1,-1), 10),
+        ('TOPPADDING', (0,0), (-1,-1), 8),
     ]))
     story.append(tf)
 
@@ -245,7 +256,7 @@ def crear_pdf_memoria_tecnica(datos, logo_raw=None):
     cell_bold = ParagraphStyle(name="MCellB", parent=styles["Normal"], fontSize=7.5, leading=9.5, fontName="Helvetica-Bold")
 
     logo_img = RLImage(io.BytesIO(logo_raw), width=130, height=45) if logo_raw else Paragraph("<b>ZONA ZERO</b>", t_empresa)
-    story.append(Table([[logo_img, Paragraph("<b>ZONA ZERO 'ALL ENGINEERING SOLUTIONS'</b><br/>Memoria Técnica de Dimensionamiento Eléctrico | NOM-001-SEDE-2012", s_empresa)]],
+    story.append(Table([[logo_img, Paragraph("<b>ZONA ZERO 'ALL ENGINEERING SOLUTIONS'</b><br/>Memoria Técnica de Dimensionamiento Eléctrico | NOM-001-SEDE-2012 Art. 690", s_empresa)]],
                        colWidths=[150, 390],
                        style=[('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('BOTTOMPADDING', (0,0), (-1,-1), 6)]))
     story.append(Spacer(1, 4))
@@ -255,7 +266,7 @@ def crear_pdf_memoria_tecnica(datos, logo_raw=None):
         [Paragraph("<b>Cliente:</b>", cell_bold), Paragraph(str(datos['cliente']), cell_style), Paragraph("<b>Ubicación:</b>", cell_bold), Paragraph(str(datos['ciudad']), cell_style)],
         [Paragraph("<b>RPU / CFE:</b>", cell_bold), Paragraph(str(datos['rpu']), cell_style), Paragraph("<b>HSP Promedio:</b>", cell_bold), Paragraph(f"{datos['hsp']} hrs/día", cell_style)],
         [Paragraph("<b>Potencia Pico (kWp):</b>", cell_bold), Paragraph(f"{datos['kwp']:.2f} kWp", cell_style), Paragraph("<b>Inclinación:</b>", cell_bold), Paragraph(f"{datos['inclinacion']}° al Sur", cell_style)],
-        [Paragraph("<b>Generación Bimestral:</b>", cell_bold), Paragraph(f"{datos['gen_bimestral']:.0f} kWh", cell_style), Paragraph("<b>Cobertura:</b>", cell_bold), Paragraph(f"{datos['pct_cobertura']:.1f} %", cell_style)]
+        [Paragraph("<b>Generación Bimestral:</b>", cell_bold), Paragraph(f"{datos['gen_bimestral']:.0f} kWh", cell_style), Paragraph("<b>Arreglo Strings/MPPT:</b>", cell_bold), Paragraph(str(datos['config_strings']), cell_style)]
     ]
     ts = Table(tabla_sitio, colWidths=[120, 150, 120, 150])
     ts.setStyle(TableStyle([
@@ -268,7 +279,6 @@ def crear_pdf_memoria_tecnica(datos, logo_raw=None):
 
     story.append(Paragraph("2. Memoria de Cálculo de Conductores y Protecciones (NOM-001 Art. 690)", h2_style))
     
-    # Anchos calibrados y textos en Paragraph para evitar traslape
     tabla_elec = [
         [Paragraph("<b>Circuito</b>", cell_bold),
          Paragraph("<b>Conductor</b>", cell_bold),
@@ -278,15 +288,15 @@ def crear_pdf_memoria_tecnica(datos, logo_raw=None):
         [Paragraph("Lado CD (Generación)", cell_style),
          Paragraph(str(datos['cal_cd']), cell_style),
          Paragraph(str(datos['tub_cd']), cell_style),
-         Paragraph(f"{datos['prot_cd']}A Fusible / DPS 1000V", cell_style),
+         Paragraph(str(datos['prot_cd']), cell_style),
          Paragraph(f"{datos['caida_cd']:.2f}%", cell_style)],
         [Paragraph("Lado CA (Interconexión)", cell_style),
          Paragraph(str(datos['cal_ca']), cell_style),
          Paragraph(str(datos['tub_ca']), cell_style),
-         Paragraph(f"{datos['prot_ca']}A Termomagnético", cell_style),
+         Paragraph(str(datos['prot_ca']), cell_style),
          Paragraph(f"{datos['caida_ca']:.2f}%", cell_style)]
     ]
-    te = Table(tabla_elec, colWidths=[65, 115, 160, 130, 70])
+    te = Table(tabla_elec, colWidths=[70, 120, 150, 130, 70])
     te.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#f1f5f9")),
         ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#cbd5e1")),
@@ -299,9 +309,9 @@ def crear_pdf_memoria_tecnica(datos, logo_raw=None):
 
     story.append(Paragraph("3. Criterios Normativos de Diseño Aplicados", h2_style))
     notas = [
-        [Paragraph("• <b>Art. 690-8(a)(1):</b> Corriente máxima de circuito fotovoltaico calculada como 125% de la corriente de cortocircuito (Isc) del módulo.", cell_style)],
-        [Paragraph("• <b>Art. 690-8(b)(1):</b> Dispositivos de sobrecorriente dimensionados al 125% de la corriente continua de diseño (Isc × 1.25 × 1.25).", cell_style)],
-        [Paragraph("• <b>Art. 310-15:</b> Conductores de cobre con aislamiento THHN/THHW-LS seleccionados por ampacidad continua y corregidos por caída de tensión admisible menor al 2%.", cell_style)],
+        [Paragraph("• <b>Art. 690-8(a)(1):</b> La corriente máxima por string es 1.25 × Isc. En microinversores la conexión es directa a conectores dedicados sin canalización larga en CD.", cell_style)],
+        [Paragraph("• <b>Art. 690-8(b)(1):</b> Dispositivos de sobrecorriente dimensionados al 125% de la corriente continua de diseño.", cell_style)],
+        [Paragraph("• <b>Art. 310-15:</b> Conductores de cobre con aislamiento THHN/THHW-LS 75°C seleccionados por ampacidad y caída de tensión admisible &le; 2.0%.", cell_style)],
         [Paragraph("• <b>Capítulo 9, Tabla 1:</b> Factor de ocupación de tubería conduit no mayor al 40% para 3 o más conductores en canalización.", cell_style)]
     ]
     tn = Table(notas, colWidths=[540])
@@ -316,12 +326,12 @@ def crear_pdf_memoria_tecnica(datos, logo_raw=None):
     return buffer
 
 # ==========================================
-# INTERFAZ DE CAPTURA (CAMPOS EN BLANCO)
+# INTERFAZ DE CAPTURA
 # ==========================================
 col_a, col_b = st.columns([1, 1])
 
 with col_a:
-    st.subheader("1. Datos del Cliente y Servicio")
+    st.subheader("1. Datos del Cliente y Consumo")
     cliente = st.text_input("Nombre del Cliente / Empresa", value="", placeholder="Ej. Juan Pérez / Taller Industrial")
     ciudad = st.text_input("Ciudad / Ubicación", value="", placeholder="Ej. Saltillo, Coahuila")
 
@@ -333,7 +343,12 @@ with col_a:
 
     rpu = st.text_input("No. de Servicio CFE / RPU", value="", placeholder="Ej. 012345678901")
     servicio_ca = st.selectbox("Tipo de Acometida CA", ["Bifásico 2F-3H (220V/127V)", "Monofásico 1F-2H (127V)", "Trifásico 3F-4H (220V/127V)"])
-    consumo_bim = st.number_input("Consumo Promedio Bimestral (kWh)", min_value=0.0, value=None, placeholder="Ej. 1450")
+    
+    c_tar1, c_tar2 = st.columns(2)
+    with c_tar1:
+        consumo_bim = st.number_input("Consumo Promedio Bimestral (kWh)", min_value=0.0, value=None, placeholder="Ej. 1450")
+    with c_tar2:
+        costo_kwh = st.number_input("Costo del kWh CFE ($ MXN)", min_value=0.0, value=None, placeholder="Ej. 4.10")
 
 with col_b:
     st.subheader("2. Equipos y Topología")
@@ -358,7 +373,7 @@ with col_b:
         panel_sel = f"{nom_mod} ({p_watts or 0:.0f}W)"
         p_spec = {
             "p_watts": p_watts or 550.0, "vmp": vmp or 42.1, "imp": imp or 13.06,
-            "voc": voc or 49.8, "isc": isc or 13.98, "temp_coeff_voc": -0.28
+            "voc": voc or 49.8, "isc": isc or 13.98
         }
 
     st.write("---")
@@ -380,12 +395,10 @@ with col_b:
         with col_i2:
             if tipo_inv == "Microinversor":
                 mod_max = st.number_input("Módulos por Micro", min_value=1, max_value=8, value=4)
-                v_mppt_min, v_mppt_max, voc_max = 16.0, 60.0, 65.0
+                mppt_count = mod_max
             else:
                 mod_max = 24
-                v_mppt_min = st.number_input("Vmin MPPT (V)", min_value=0.0, value=None, placeholder="Ej. 90")
-                v_mppt_max = st.number_input("Vmax MPPT (V)", min_value=0.0, value=None, placeholder="Ej. 550")
-                voc_max = st.number_input("Voltaje Máx CD (V)", min_value=0.0, value=None, placeholder="Ej. 600")
+                mppt_count = st.number_input("No. de Rastreadores MPPT", min_value=1, max_value=6, value=2)
 
         i_spec = {
             "tipo": "micro" if tipo_inv == "Microinversor" else "central",
@@ -393,19 +406,16 @@ with col_b:
             "vac": vac_in,
             "fases": fases_in,
             "modulos_max": mod_max,
-            "v_mppt_min": v_mppt_min or 90.0,
-            "v_mppt_max": v_mppt_max or 550.0,
-            "voc_max": voc_max or 600.0,
-            "eficiencia": 0.97
+            "mppt_count": mppt_count
         }
 
     st.write("---")
 
     c3, c4 = st.columns(2)
     with c3:
-        dist_cd = st.number_input("Distancia CD (m)", min_value=0.0, value=None, placeholder="Ej. 12.0")
+        dist_cd = st.number_input("Distancia CD (módulos a inversor central en m)", min_value=0.0, value=None, placeholder="Ej. 15.0")
     with c4:
-        dist_ca = st.number_input("Distancia CA (m)", min_value=0.0, value=None, placeholder="Ej. 18.0")
+        dist_ca = st.number_input("Distancia CA (inversor a centro de carga en m)", min_value=0.0, value=None, placeholder="Ej. 18.0")
 
     subtotal_manual = st.number_input("Subtotal del Proyecto (MXN antes de IVA)", min_value=0.0, value=None, placeholder="Ej. 75000.00")
 
@@ -416,12 +426,12 @@ st.divider()
 # ==========================================
 campos_listos = (consumo_bim is not None and consumo_bim > 0 and 
                  hsp is not None and hsp > 0 and 
-                 dist_cd is not None and dist_ca is not None)
+                 dist_ca is not None)
 
 if not campos_listos:
-    st.info("👋 Ingresa los datos de consumo bimestral, HSP y distancias para ejecutar el cálculo y generar los presupuestos.")
+    st.info("👋 Ingresa el consumo bimestral, las HSP y la distancia de CA para calcular el sistema.")
 else:
-    # Cálculo Solar
+    # 1. Dimensionamiento Solar
     consumo_diario = consumo_bim / 60.0
     potencia_pico_kw = consumo_diario / (hsp * 0.80)
     n_paneles = math.ceil((potencia_pico_kw * 1000) / p_spec["p_watts"])
@@ -429,45 +439,99 @@ else:
     gen_bimestral = kwp_real * hsp * 60 * 0.80
     pct_cobertura = (gen_bimestral / consumo_bim) * 100.0
 
+    # 2. Análisis Financiero
+    precio_kwh_calc = costo_kwh if (costo_kwh is not None and costo_kwh > 0) else 4.10
+    ahorro_bimestral = min(gen_bimestral, consumo_bim) * precio_kwh_calc
+    ahorro_anual = ahorro_bimestral * 6
+
+    # 3. Topología e Inversores
     if i_spec["tipo"] == "micro":
         topologia = "Microinversores"
         n_inversores = math.ceil(n_paneles / i_spec["modulos_max"])
         vac = i_spec["vac"]
-        es_tri = i_spec.get("fases", 1) == 3
+        fases = i_spec.get("fases", 2)
+        es_tri = (fases == 3)
+        config_strings = f"{n_inversores} Microinversores (Entrada individual por módulo)"
+        
+        # En microinversores la conexión CD es por conectores MC4 directos
+        cal_cd = "Chicote MC4 12 AWG (Fab)"
+        prot_cd = "Integrada en Micro"
+        tub_cd = "Sin canalización CD (Techo)"
+        caida_cd = 0.2
     else:
         topologia = "Inversor Central"
         n_inversores = 1
         vac = i_spec["vac"]
-        es_tri = i_spec.get("fases", 1) == 3
+        fases = i_spec.get("fases", 2)
+        es_tri = (fases == 3)
+        num_mppt = max(1, i_spec.get("mppt_count", 2))
+        strings = num_mppt
+        paneles_por_string = math.ceil(n_paneles / strings)
+        config_strings = f"{strings} Strings ({paneles_por_string} módulos c/u en serie)"
 
-    # Lado CD
-    i_diseno_cd = p_spec["isc"] * 1.25 * 1.25
-    prot_cd = seleccionar_proteccion(i_diseno_cd)
-    cal_cd, caida_cd = calcular_calibre(i_diseno_cd, dist_cd, p_spec["vmp"], caida_max_pct=1.5, es_trifasico=False)
-    tub_cd = dimensionar_tuberia(cal_cd)
+        # En inversor central, cada string lleva la corriente de 1 solo módulo (Isc)
+        # NOM-001 Art. 690-8: Isc * 1.25 * 1.25
+        i_diseno_string = p_spec["isc"] * 1.25 * 1.25
+        prot_cd_amp = seleccionar_proteccion(i_diseno_string)
+        prot_cd = f"{prot_cd_amp}A Fusible CD (x{strings})"
+        
+        v_string = paneles_por_string * p_spec["vmp"]
+        dist_cd_calc = dist_cd if (dist_cd is not None and dist_cd > 0) else 15.0
+        cal_cd_calc, caida_cd = calcular_calibre(i_diseno_string, dist_cd_calc, v_string, caida_max_pct=1.5, es_trifasico=False)
+        cal_cd = f"{cal_cd_calc} PV-Wire ({strings} pares)"
+        tub_cd = dimensionar_tuberia(cal_cd_calc, num_conductores=strings*2)
 
-    # Lado CA
+    # 4. Cálculo del Circuito CA (Troncal hacia centro de carga)
     potencia_ca_total = min(kwp_real * 1000, n_inversores * i_spec["potencia"])
-    i_nom_ca = potencia_ca_total / (math.sqrt(3) * vac) if es_tri else potencia_ca_total / vac
-    i_diseno_ca = i_nom_ca * 1.25
-    prot_ca = seleccionar_proteccion(i_diseno_ca)
-    cal_ca, caida_ca = calcular_calibre(i_diseno_ca, dist_ca, vac, caida_max_pct=2.0, es_trifasico=es_tri)
-    tub_ca = dimensionar_tuberia(cal_ca)
+    if es_tri:
+        i_nom_ca = potencia_ca_total / (math.sqrt(3) * vac)
+    else:
+        i_nom_ca = potencia_ca_total / vac
 
-    # Presupuesto
+    i_diseno_ca = i_nom_ca * 1.25 # Factor de carga continua NOM-001
+    prot_ca_amp = seleccionar_proteccion(i_diseno_ca)
+    prot_ca = f"{prot_ca_amp}A Termomagnético ({fases}P)"
+    cal_ca, caida_ca = calcular_calibre(i_diseno_ca, dist_ca, vac, caida_max_pct=2.0, es_trifasico=es_tri)
+    tub_ca = dimensionar_tuberia(cal_ca, num_conductores=fases+1)
+
+    # 5. Inversión y ROI
     subtotal = subtotal_manual if (subtotal_manual is not None and subtotal_manual > 0) else (kwp_real * 1000 * 21.5 / 1.16)
     iva = subtotal * 0.16
     total_sistema = subtotal + iva
+    roi_anos = total_sistema / ahorro_anual if ahorro_anual > 0 else 0.0
 
-    # Métricas Visuales
+    # ==========================================
+    # MÉTRICAS Y RESULTADOS VISUALES
+    # ==========================================
     st.subheader("3. Resultados del Dimensionamiento")
-    m1, m2, m3, m4 = st.columns(4)
+    m1, m2, m3, m4, m5 = st.columns(5)
     m1.metric("Paneles Necesarios", f"{n_paneles} módulos", f"{kwp_real:.2f} kWp")
     m2.metric("Generación Est.", f"{gen_bimestral:.0f} kWh/bim", f"{pct_cobertura:.1f}% cubierto")
-    m3.metric("Protección CA", f"{prot_ca} A", f"Calibre: {cal_ca}")
-    m4.metric("Inversión Total", f"${total_sistema:,.2f} MXN", f"Subtotal: ${subtotal:,.2f}")
+    m3.metric("Ahorro Bimestral", f"${ahorro_bimestral:,.0f} MXN", f"${ahorro_anual:,.0f}/año")
+    m4.metric("Retorno (ROI)", f"{roi_anos:.1f} años", f"Tarifa: ${precio_kwh_calc:.2f}/kWh")
+    m5.metric("Protección CA", f"{prot_ca_amp} A", f"Calibre: {cal_ca}")
 
-    # Datos empaquetados para los PDFs
+    st.write("---")
+
+    # Resumen Eléctrico en Pantalla
+    st.subheader("⚡ Resumen de Conductores y Canalizaciones")
+    c_elec1, c_elec2 = st.columns(2)
+    with c_elec1:
+        st.markdown(f"**Lado Corriente Directa (CD):**")
+        st.write(f"- Topología: **{topologia}** ({config_strings})")
+        st.write(f"- Conductor: **{cal_cd}**")
+        st.write(f"- Canalización: **{tub_cd}**")
+        st.write(f"- Protección: **{prot_cd}**")
+        st.write(f"- Caída de Tensión CD: **{caida_cd:.2f}%**")
+    with c_elec2:
+        st.markdown(f"**Lado Corriente Alterna (CA):**")
+        st.write(f"- Tensión de Interconexión: **{vac}V ({fases} Fases)**")
+        st.write(f"- Conductor: **{cal_ca} THHN/THHW-LS**")
+        st.write(f"- Canalización: **{tub_ca}**")
+        st.write(f"- Protección: **{prot_ca}**")
+        st.write(f"- Caída de Tensión CA: **{caida_ca:.2f}%**")
+
+    # Datos para los PDFs
     datos_pdf = {
         "cliente": cliente if cliente else "Sin especificar",
         "ciudad": ciudad if ciudad else "Sin especificar",
@@ -475,9 +539,10 @@ else:
         "hsp": hsp, "inclinacion": inclinacion if inclinacion else 25.0,
         "kwp": kwp_real, "n_paneles": n_paneles, "panel_nombre": panel_sel, "inv_nombre": inv_sel,
         "gen_bimestral": gen_bimestral, "pct_cobertura": pct_cobertura, "topologia": topologia,
-        "n_inversores": n_inversores, "vac": vac,
+        "n_inversores": n_inversores, "vac": vac, "fases": fases, "config_strings": config_strings,
         "cal_cd": cal_cd, "tub_cd": tub_cd, "prot_cd": prot_cd, "caida_cd": caida_cd,
         "cal_ca": cal_ca, "tub_ca": tub_ca, "prot_ca": prot_ca, "caida_ca": caida_ca,
+        "ahorro_bim": ahorro_bimestral, "ahorro_anual": ahorro_anual, "roi": roi_anos,
         "subtotal": subtotal, "iva": iva, "total": total_sistema
     }
 
