@@ -1,6 +1,8 @@
 import streamlit as st
 import math
 import io
+import os
+from datetime import date
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as RLImage
@@ -9,23 +11,35 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 st.set_page_config(page_title="CALCULADORA FV ZONA ZERO", layout="wide", page_icon="☀️")
 
 # ==========================================
-# GESTIÓN DEL LOGOTIPO
+# GESTIÓN PERMANENTE DEL LOGOTIPO
 # ==========================================
+# Carga automática del logo local (logo.png / logo.jpg en el repositorio)
+logo_bytes = None
+for default_logo in ["logo.png", "logo.jpg", "logo.jpeg"]:
+    if os.path.exists(default_logo):
+        with open(default_logo, "rb") as f:
+            logo_bytes = f.read()
+        break
+
 with st.sidebar:
     st.header("🏢 Identidad de Marca")
-    logo_file = st.file_uploader("Cargar logotipo Zona Zero (PNG/JPG)", type=["png", "jpg", "jpeg"])
+    if logo_bytes is not None:
+        st.success("Logotipo base cargado automáticamente desde repositorio.")
+    logo_file = st.file_uploader("Reemplazar logotipo temporalmente (PNG/JPG)", type=["png", "jpg", "jpeg"])
     if logo_file is not None:
-        st.session_state["logo_bytes"] = logo_file.read()
-        st.success("Logotipo cargado correctamente.")
+        logo_bytes = logo_file.read()
+        st.session_state["logo_bytes"] = logo_bytes
 
-logo_bytes = st.session_state.get("logo_bytes", None)
+if "logo_bytes" in st.session_state and st.session_state["logo_bytes"]:
+    logo_bytes = st.session_state["logo_bytes"]
 
+# Cabecera principal de la aplicación
 col_h1, col_h2 = st.columns([1.5, 4.5])
 with col_h1:
     if logo_bytes:
         st.image(logo_bytes, width=240)
     else:
-        st.info("Sube tu logotipo en la barra lateral.")
+        st.info("Coloca 'logo.png' en tu repositorio de GitHub para cargarlo siempre en automático.")
 with col_h2:
     st.title("CALCULADORA FV ZONA ZERO")
     st.caption("All Engineering Solutions | Dimensionamiento Solar, NOM-001 Art. 690 y Presupuestos")
@@ -108,28 +122,37 @@ def dimensionar_tuberia(calibre, num_conductores=3):
 # ==========================================
 def crear_pdf_solo_presupuesto(datos, logo_raw=None):
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
+    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=30, bottomMargin=30)
     story = []
     styles = getSampleStyleSheet()
 
     t_empresa = ParagraphStyle(name="PEmp", parent=styles["Heading1"], fontSize=16, textColor=colors.HexColor("#0f172a"), spaceAfter=2)
     s_empresa = ParagraphStyle(name="PSub", parent=styles["Normal"], fontSize=8, textColor=colors.HexColor("#475569"))
-    h2_style = ParagraphStyle(name="PH2", parent=styles["Heading2"], fontSize=10, textColor=colors.HexColor("#1e3a8a"), spaceBefore=5, spaceAfter=3)
+    fol_style = ParagraphStyle(name="PFol", parent=styles["Normal"], fontSize=8.5, textColor=colors.HexColor("#0f172a"), alignment=2, leading=11)
+    h2_style = ParagraphStyle(name="PH2", parent=styles["Heading2"], fontSize=9.5, textColor=colors.HexColor("#1e3a8a"), spaceBefore=4, spaceAfter=2)
     cell_style = ParagraphStyle(name="PCell", parent=styles["Normal"], fontSize=7.5, leading=9.5)
     cell_bold = ParagraphStyle(name="PCellB", parent=styles["Normal"], fontSize=7.5, leading=9.5, fontName="Helvetica-Bold")
+    firm_style = ParagraphStyle(name="PFirm", parent=styles["Normal"], fontSize=7.5, leading=10, alignment=1)
 
-    logo_img = RLImage(io.BytesIO(logo_raw), width=130, height=45) if logo_raw else Paragraph("<b>ZONA ZERO</b>", t_empresa)
-    info_header = [
-        [logo_img, Paragraph("<b>ZONA ZERO 'ALL ENGINEERING SOLUTIONS'</b><br/>Saltillo, Coahuila | Instalaciones Fotovoltaicas, HVAC y Eléctricas", s_empresa)]
+    # 1. Encabezado con Logo Ampliado a la izquierda y Folio/Fecha a la derecha
+    logo_img = RLImage(io.BytesIO(logo_raw), width=160, height=65) if logo_raw else Paragraph("<b>ZONA ZERO</b><br/><font size=7>All Engineering Solutions</font>", t_empresa)
+    
+    header_data = [
+        [logo_img,
+         Paragraph(f"<b>ZONA ZERO 'ALL ENGINEERING SOLUTIONS'</b><br/>"
+                   f"Saltillo, Coahuila | Soluciones Integrales de Ingeniería<br/>"
+                   f"<b>Folio:</b> {datos['folio']}<br/>"
+                   f"<b>Fecha:</b> {datos['fecha']}", fol_style)]
     ]
-    th = Table(info_header, colWidths=[150, 390])
+    th = Table(header_data, colWidths=[180, 360])
     th.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
     ]))
     story.append(th)
     story.append(Spacer(1, 4))
 
+    # Franja de Título
     story.append(Table([[Paragraph("<font color='white'><b>COTIZACIÓN COMERCIAL - SISTEMA FOTOVOLTAICO INTERCONECTADO</b></font>", cell_bold)]],
                        colWidths=[540],
                        style=[('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#1e3a8a")),
@@ -138,6 +161,7 @@ def crear_pdf_solo_presupuesto(datos, logo_raw=None):
                               ('BOTTOMPADDING', (0,0), (-1,-1), 3)]))
     story.append(Spacer(1, 4))
 
+    # Datos Generales
     datos_gen = [
         [Paragraph("<b>Cliente:</b>", cell_bold), Paragraph(str(datos['cliente']), cell_style),
          Paragraph("<b>Ubicación:</b>", cell_bold), Paragraph(str(datos['ciudad']), cell_style)],
@@ -155,7 +179,7 @@ def crear_pdf_solo_presupuesto(datos, logo_raw=None):
     story.append(tg)
     story.append(Spacer(1, 4))
 
-    # Beneficios Financieros
+    # Análisis Energético y Retorno
     story.append(Paragraph("1. Análisis Energético y Retorno de Inversión", h2_style))
     tabla_fin = [
         [Paragraph("<b>Generación Bimestral Est.</b>", cell_bold), Paragraph("<b>Ahorro Bimestral Estimado</b>", cell_bold), Paragraph("<b>Ahorro Anual Estimado</b>", cell_bold), Paragraph("<b>Tiempo de Retorno (ROI)</b>", cell_bold)],
@@ -166,8 +190,8 @@ def crear_pdf_solo_presupuesto(datos, logo_raw=None):
         ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#f1f5f9")),
         ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#cbd5e1")),
         ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-        ('TOPPADDING', (0,0), (-1,-1), 3),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+        ('TOPPADDING', (0,0), (-1,-1), 2.5),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
     ]))
     story.append(tfin)
     story.append(Spacer(1, 4))
@@ -208,7 +232,7 @@ def crear_pdf_solo_presupuesto(datos, logo_raw=None):
     story.append(ta)
     story.append(Spacer(1, 4))
 
-    # Inversión
+    # Resumen de Inversión
     story.append(Paragraph("4. Resumen de Inversión", h2_style))
     tabla_precios = [
         [Paragraph("<b>CONCEPTO</b>", cell_bold), Paragraph("<b>MONTO (MXN)</b>", cell_bold)],
@@ -221,21 +245,24 @@ def crear_pdf_solo_presupuesto(datos, logo_raw=None):
         ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#e2e8f0")),
         ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#cbd5e1")),
         ('ALIGN', (1,0), (1,-1), 'RIGHT'),
-        ('TOPPADDING', (0,0), (-1,-1), 3),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+        ('TOPPADDING', (0,0), (-1,-1), 2.5),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
         ('BACKGROUND', (0,-1), (-1,-1), colors.HexColor("#f8fafc")),
     ]))
     story.append(tp)
-    story.append(Spacer(1, 10))
+    story.append(Spacer(1, 14))
 
+    # Líneas de Firma y Aceptación perfectamente centradas
     firmas = [
-        [Paragraph("________________________________________<br/><b>Zona Zero 'All Engineering Solutions'</b><br/>Ingeniería y Proyectos", cell_style),
-         Paragraph("________________________________________<br/><b>Aceptación del Cliente</b><br/>Firma y Fecha", cell_style)]
+        [Paragraph("____________________________________________<br/><b>Zona Zero 'All Engineering Solutions'</b><br/>Ingeniería y Proyectos", firm_style),
+         Paragraph(f"____________________________________________<br/><b>Aceptación del Cliente</b><br/>Fecha: {datos['fecha']} | Firma", firm_style)]
     ]
     tf = Table(firmas, colWidths=[270, 270])
     tf.setStyle(TableStyle([
         ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-        ('TOPPADDING', (0,0), (-1,-1), 8),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('TOPPADDING', (0,0), (-1,-1), 4),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
     ]))
     story.append(tf)
 
@@ -255,9 +282,9 @@ def crear_pdf_memoria_tecnica(datos, logo_raw=None):
     cell_style = ParagraphStyle(name="MCell", parent=styles["Normal"], fontSize=7.5, leading=9.5)
     cell_bold = ParagraphStyle(name="MCellB", parent=styles["Normal"], fontSize=7.5, leading=9.5, fontName="Helvetica-Bold")
 
-    logo_img = RLImage(io.BytesIO(logo_raw), width=130, height=45) if logo_raw else Paragraph("<b>ZONA ZERO</b>", t_empresa)
-    story.append(Table([[logo_img, Paragraph("<b>ZONA ZERO 'ALL ENGINEERING SOLUTIONS'</b><br/>Memoria Técnica de Dimensionamiento Eléctrico | NOM-001-SEDE-2012 Art. 690", s_empresa)]],
-                       colWidths=[150, 390],
+    logo_img = RLImage(io.BytesIO(logo_raw), width=150, height=60) if logo_raw else Paragraph("<b>ZONA ZERO</b>", t_empresa)
+    story.append(Table([[logo_img, Paragraph(f"<b>ZONA ZERO 'ALL ENGINEERING SOLUTIONS'</b><br/>Memoria Técnica de Dimensionamiento Eléctrico | NOM-001-SEDE-2012 Art. 690<br/><b>Folio:</b> {datos['folio']} | <b>Fecha:</b> {datos['fecha']}", s_empresa)]],
+                       colWidths=[160, 380],
                        style=[('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('BOTTOMPADDING', (0,0), (-1,-1), 6)]))
     story.append(Spacer(1, 4))
 
@@ -309,9 +336,9 @@ def crear_pdf_memoria_tecnica(datos, logo_raw=None):
 
     story.append(Paragraph("3. Criterios Normativos de Diseño Aplicados", h2_style))
     notas = [
-        [Paragraph("• <b>Art. 690-8(a)(1):</b> La corriente máxima por string es 1.25 × Isc. En microinversores la conexión es directa a conectores dedicados sin canalización larga en CD.", cell_style)],
+        [Paragraph("• <b>Art. 690-8(a)(1):</b> La corriente máxima por string es 1.25 × Isc. En microinversores la conexión es directa sin tiradas largas en CD.", cell_style)],
         [Paragraph("• <b>Art. 690-8(b)(1):</b> Dispositivos de sobrecorriente dimensionados al 125% de la corriente continua de diseño.", cell_style)],
-        [Paragraph("• <b>Art. 310-15:</b> Conductores de cobre con aislamiento THHN/THHW-LS 75°C seleccionados por ampacidad y caída de tensión admisible &le; 2.0%.", cell_style)],
+        [Paragraph("• <b>Art. 310-15:</b> Conductores de cobre con aislamiento THHN/THHW-LS 75°C seleccionados por ampacidad y caída admisible &le; 2.0%.", cell_style)],
         [Paragraph("• <b>Capítulo 9, Tabla 1:</b> Factor de ocupación de tubería conduit no mayor al 40% para 3 o más conductores en canalización.", cell_style)]
     ]
     tn = Table(notas, colWidths=[540])
@@ -331,7 +358,14 @@ def crear_pdf_memoria_tecnica(datos, logo_raw=None):
 col_a, col_b = st.columns([1, 1])
 
 with col_a:
-    st.subheader("1. Datos del Cliente y Consumo")
+    st.subheader("1. Datos del Cliente y Presupuesto")
+    
+    c_fol1, c_fol2 = st.columns(2)
+    with c_fol1:
+        folio_doc = st.text_input("Folio de Cotización", value=f"ZZ-{date.today().strftime('%Y%m')}-01")
+    with c_fol2:
+        fecha_doc = st.date_input("Fecha de Emisión", value=date.today())
+
     cliente = st.text_input("Nombre del Cliente / Empresa", value="", placeholder="Ej. Juan Pérez / Taller Industrial")
     ciudad = st.text_input("Ciudad / Ubicación", value="", placeholder="Ej. Saltillo, Coahuila")
 
@@ -453,7 +487,6 @@ else:
         es_tri = (fases == 3)
         config_strings = f"{n_inversores} Microinversores (Entrada individual por módulo)"
         
-        # En microinversores la conexión CD es por conectores MC4 directos
         cal_cd = "Chicote MC4 12 AWG (Fab)"
         prot_cd = "Integrada en Micro"
         tub_cd = "Sin canalización CD (Techo)"
@@ -469,8 +502,6 @@ else:
         paneles_por_string = math.ceil(n_paneles / strings)
         config_strings = f"{strings} Strings ({paneles_por_string} módulos c/u en serie)"
 
-        # En inversor central, cada string lleva la corriente de 1 solo módulo (Isc)
-        # NOM-001 Art. 690-8: Isc * 1.25 * 1.25
         i_diseno_string = p_spec["isc"] * 1.25 * 1.25
         prot_cd_amp = seleccionar_proteccion(i_diseno_string)
         prot_cd = f"{prot_cd_amp}A Fusible CD (x{strings})"
@@ -481,14 +512,14 @@ else:
         cal_cd = f"{cal_cd_calc} PV-Wire ({strings} pares)"
         tub_cd = dimensionar_tuberia(cal_cd_calc, num_conductores=strings*2)
 
-    # 4. Cálculo del Circuito CA (Troncal hacia centro de carga)
+    # 4. Circuito CA
     potencia_ca_total = min(kwp_real * 1000, n_inversores * i_spec["potencia"])
     if es_tri:
         i_nom_ca = potencia_ca_total / (math.sqrt(3) * vac)
     else:
         i_nom_ca = potencia_ca_total / vac
 
-    i_diseno_ca = i_nom_ca * 1.25 # Factor de carga continua NOM-001
+    i_diseno_ca = i_nom_ca * 1.25
     prot_ca_amp = seleccionar_proteccion(i_diseno_ca)
     prot_ca = f"{prot_ca_amp}A Termomagnético ({fases}P)"
     cal_ca, caida_ca = calcular_calibre(i_diseno_ca, dist_ca, vac, caida_max_pct=2.0, es_trifasico=es_tri)
@@ -513,26 +544,10 @@ else:
 
     st.write("---")
 
-    # Resumen Eléctrico en Pantalla
-    st.subheader("⚡ Resumen de Conductores y Canalizaciones")
-    c_elec1, c_elec2 = st.columns(2)
-    with c_elec1:
-        st.markdown(f"**Lado Corriente Directa (CD):**")
-        st.write(f"- Topología: **{topologia}** ({config_strings})")
-        st.write(f"- Conductor: **{cal_cd}**")
-        st.write(f"- Canalización: **{tub_cd}**")
-        st.write(f"- Protección: **{prot_cd}**")
-        st.write(f"- Caída de Tensión CD: **{caida_cd:.2f}%**")
-    with c_elec2:
-        st.markdown(f"**Lado Corriente Alterna (CA):**")
-        st.write(f"- Tensión de Interconexión: **{vac}V ({fases} Fases)**")
-        st.write(f"- Conductor: **{cal_ca} THHN/THHW-LS**")
-        st.write(f"- Canalización: **{tub_ca}**")
-        st.write(f"- Protección: **{prot_ca}**")
-        st.write(f"- Caída de Tensión CA: **{caida_ca:.2f}%**")
-
     # Datos para los PDFs
     datos_pdf = {
+        "folio": folio_doc if folio_doc else "S/F",
+        "fecha": fecha_doc.strftime("%d/%m/%Y") if fecha_doc else date.today().strftime("%d/%m/%Y"),
         "cliente": cliente if cliente else "Sin especificar",
         "ciudad": ciudad if ciudad else "Sin especificar",
         "rpu": rpu if rpu else "Sin especificar",
@@ -546,7 +561,6 @@ else:
         "subtotal": subtotal, "iva": iva, "total": total_sistema
     }
 
-    st.write("---")
     st.subheader("4. Descarga de Documentos Técnicos y Comerciales")
     col_btn1, col_btn2 = st.columns(2)
 
