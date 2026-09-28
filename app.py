@@ -71,14 +71,14 @@ st.divider()
 # CATÁLOGOS BASE Y TABLAS NOM-001
 # ==========================================
 PANEL_CATALOG = {
+    "Tier 1 630W Alto Rendimiento (Vmp: 38.5V, Imp: 16.36A, Voc: 46.2V, Isc: 17.48A)": {
+        "p_watts": 630, "vmp": 38.5, "imp": 16.36, "voc": 46.2, "isc": 17.48
+    },
     "Osda 550W Bifacial (Vmp: 42.1V, Imp: 13.06A, Voc: 49.8V, Isc: 13.98A)": {
         "p_watts": 550, "vmp": 42.1, "imp": 13.06, "voc": 49.8, "isc": 13.98
     },
     "Tier 1 580W Monocristalino (Vmp: 42.8V, Imp: 13.55A, Voc: 51.2V, Isc: 14.32A)": {
         "p_watts": 580, "vmp": 42.8, "imp": 13.55, "voc": 51.2, "isc": 14.32
-    },
-    "Tier 1 630W Alto Rendimiento (Vmp: 38.5V, Imp: 16.36A, Voc: 46.2V, Isc: 17.48A)": {
-        "p_watts": 630, "vmp": 38.5, "imp": 16.36, "voc": 46.2, "isc": 17.48
     },
     "Tier 1 660W Alto Rendimiento (Vmp: 38.3V, Imp: 17.23A, Voc: 45.9V, Isc: 18.25A)": {
         "p_watts": 660, "vmp": 38.3, "imp": 17.23, "voc": 45.9, "isc": 18.25
@@ -86,20 +86,23 @@ PANEL_CATALOG = {
 }
 
 INVERTER_CATALOG = {
-    "Microinversor Hoymiles HMS-2000-4T (4 MPPT Indep, 2000W, 220V CA)": {
-        "tipo": "micro", "potencia": 2000, "vac": 220, "modulos_max": 4, "fases": 2, "mppt_count": 4
-    },
-    "Microinversor Hoymiles HMT-2250-6T (Trifásico 220V CA, 2250W)": {
-        "tipo": "micro", "potencia": 2250, "vac": 220, "modulos_max": 6, "fases": 3, "mppt_count": 3
-    },
     "Inversor Central Growatt MIN 3000TL-X (220V, 2 MPPT, 3000W)": {
         "tipo": "central", "potencia": 3000, "vac": 220, "fases": 2, "mppt_count": 2
+    },
+    "Inversor Central Growatt MIN 5000TL-X (220V, 2 MPPT, 5000W)": {
+        "tipo": "central", "potencia": 5000, "vac": 220, "fases": 2, "mppt_count": 2
     },
     "Inversor Central Growatt MIN 6000TL-X (220V, 2 MPPT, 6000W)": {
         "tipo": "central", "potencia": 6000, "vac": 220, "fases": 2, "mppt_count": 2
     },
     "Inversor Central Solis 10kW Trifásico (3F 220V CA, 10000W)": {
         "tipo": "central", "potencia": 10000, "vac": 220, "fases": 3, "mppt_count": 2
+    },
+    "Microinversor Hoymiles HMS-2000-4T (4 MPPT Indep, 2000W, 220V CA)": {
+        "tipo": "micro", "potencia": 2000, "vac": 220, "modulos_max": 4, "fases": 2, "mppt_count": 4
+    },
+    "Microinversor Hoymiles HMT-2250-6T (Trifásico 220V CA, 2250W)": {
+        "tipo": "micro", "potencia": 2250, "vac": 220, "modulos_max": 6, "fases": 3, "mppt_count": 3
     }
 }
 
@@ -161,7 +164,6 @@ def crear_pdf_solo_presupuesto(datos, logo_raw=None):
     fin_val_gold = ParagraphStyle(name="PFinValG", parent=styles["Normal"], fontSize=11, textColor=colors.HexColor("#fbbf24"), alignment=1, fontName="Helvetica-Bold")
     fin_val_white = ParagraphStyle(name="PFinValW", parent=styles["Normal"], fontSize=10, textColor=colors.white, alignment=1, fontName="Helvetica-Bold")
 
-    # 1. Encabezado con Logo ampliado y Folio/Fecha
     logo_img = RLImage(io.BytesIO(logo_raw), width=165, height=65) if logo_raw else Paragraph("<b>ZONA ZERO</b><br/><font size=7>All Engineering Solutions</font>", t_empresa)
     header_data = [
         [logo_img,
@@ -178,7 +180,6 @@ def crear_pdf_solo_presupuesto(datos, logo_raw=None):
     story.append(th)
     story.append(Spacer(1, 3))
 
-    # Franja de Título
     story.append(Table([[Paragraph("<font color='white'><b>COTIZACIÓN COMERCIAL - SISTEMA FOTOVOLTAICO INTERCONECTADO</b></font>", cell_bold)]],
                        colWidths=[540],
                        style=[('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#1e3a8a")),
@@ -187,7 +188,6 @@ def crear_pdf_solo_presupuesto(datos, logo_raw=None):
                               ('BOTTOMPADDING', (0,0), (-1,-1), 3)]))
     story.append(Spacer(1, 4))
 
-    # Datos Generales
     datos_gen = [
         [Paragraph("<b>Cliente:</b>", cell_bold), Paragraph(str(datos['cliente']), cell_style),
          Paragraph("<b>Ubicación:</b>", cell_bold), Paragraph(str(datos['ciudad']), cell_style)],
@@ -205,7 +205,6 @@ def crear_pdf_solo_presupuesto(datos, logo_raw=None):
     story.append(tg)
     story.append(Spacer(1, 4))
 
-    # 1. BLOQUE DE ALTO IMPACTO: Análisis Energético y Retorno
     story.append(Paragraph("1. Análisis Energético y Retorno de Inversión", h2_style))
     tabla_fin = [
         [Paragraph("GENERACIÓN ESTIMADA", fin_lbl), Paragraph("AHORRO BIMESTRAL", fin_lbl), Paragraph("AHORRO ANUAL ESTIMADO", fin_lbl), Paragraph("RETORNO DE INVERSIÓN", fin_lbl)],
@@ -228,7 +227,6 @@ def crear_pdf_solo_presupuesto(datos, logo_raw=None):
     story.append(tfin)
     story.append(Spacer(1, 4))
 
-    # 2. Equipamiento Principal
     story.append(Paragraph("2. Equipamiento Seleccionado", h2_style))
     tabla_eq = [
         [Paragraph("<b>Concepto</b>", cell_bold), Paragraph("<b>Descripción Técnica</b>", cell_bold), Paragraph("<b>Cant.</b>", cell_bold)],
@@ -247,7 +245,6 @@ def crear_pdf_solo_presupuesto(datos, logo_raw=None):
     story.append(te)
     story.append(Spacer(1, 4))
 
-    # 3. Alcance
     story.append(Paragraph("3. Alcance del Proyecto Llave en Mano", h2_style))
     alcances = [
         [Paragraph("• Suministro y montaje mecánico de módulos fotovoltaicos e inversores.", cell_style)],
@@ -264,7 +261,6 @@ def crear_pdf_solo_presupuesto(datos, logo_raw=None):
     story.append(ta)
     story.append(Spacer(1, 4))
 
-    # 4. Inversión
     story.append(Paragraph("4. Resumen de Inversión", h2_style))
     tabla_precios = [
         [Paragraph("<b>CONCEPTO</b>", cell_bold), Paragraph("<b>MONTO (MXN)</b>", cell_bold)],
@@ -283,7 +279,6 @@ def crear_pdf_solo_presupuesto(datos, logo_raw=None):
     ]))
     story.append(tp)
     
-    # Espaciado despegado para firmas
     story.append(Spacer(1, 28))
 
     firmas = [
@@ -400,7 +395,6 @@ with col_a:
 
     cliente = st.text_input("Nombre del Cliente / Empresa", value="", placeholder="Ej. Juan Pérez / Taller Industrial")
     
-    # Selector de Ciudad o Manual
     ciudad_sel = st.selectbox("Ciudad (Búsqueda automática de HSP / Inclinación)", list(CIUDADES_SOLAR.keys()), index=0)
     
     if ciudad_sel == "Personalizado / Manual":
@@ -430,7 +424,7 @@ with col_a:
 with col_b:
     st.subheader("2. Equipos y Topología")
     
-    # Módulo Fotovoltaico
+    # 1. Módulo Fotovoltaico
     panel_manual = st.checkbox("⚙️ Ingresar Módulo Solar manualmente", value=False)
     if not panel_manual:
         panel_sel = st.selectbox("Módulo Fotovoltaico (Catálogo)", list(PANEL_CATALOG.keys()))
@@ -455,18 +449,50 @@ with col_b:
 
     st.write("---")
 
-    # Inversor / Microinversor
+    # PRE-CÁLCULO DE POTENCIA PICO PARA FILTRO DE INVERSORES
+    # Permite saber cuántos kWp se demandan antes de mostrar el catálogo de inversores
+    potencia_est_kw = 0.0
+    n_paneles_est = 0
+    if consumo_bim and consumo_bim > 0 and hsp and hsp > 0:
+        c_diario_est = consumo_bim / 60.0
+        p_pico_est = c_diario_est / (hsp * 0.80)
+        n_paneles_est = math.ceil((p_pico_est * 1000) / p_spec["p_watts"])
+        potencia_est_kw = (n_paneles_est * p_spec["p_watts"]) / 1000.0
+
+    # 2. Inversor / Microinversor
     inv_manual = st.checkbox("⚙️ Ingresar Inversor / Microinversor manualmente", value=False)
+    
     if not inv_manual:
-        inv_sel = st.selectbox("Inversor (Catálogo)", list(INVERTER_CATALOG.keys()))
-        i_spec = INVERTER_CATALOG[inv_sel]
+        # FILTRO INTELIGENTE DE INVERSORES SEGÚN POTENCIA PICO
+        inversores_compatibles = {}
+        for k_inv, v_inv in INVERTER_CATALOG.items():
+            if v_inv["tipo"] == "micro":
+                # En microinversores se colocan tantas unidades como módulos existan
+                inversores_compatibles[k_inv] = v_inv
+            else:
+                # En inversor central, la potencia del inversor debe admitir la potencia pico (Ratio DC/AC <= 1.30)
+                if potencia_est_kw > 0:
+                    pot_inv_kw = v_inv["potencia"] / 1000.0
+                    # Admitido si potencia_inv * 1.30 >= potencia_cd
+                    if (pot_inv_kw * 1.30) >= (potencia_est_kw * 0.95):
+                        inversores_compatibles[k_inv] = v_inv
+                else:
+                    inversores_compatibles[k_inv] = v_inv
+
+        if not inversores_compatibles:
+            # Si el sistema es grande (ej. > 13 kWp) y supera los inversores de catálogo
+            st.warning(f"⚠️ El arreglo calculado ({potencia_est_kw:.2f} kWp) supera los inversores centrales estándar. Se recomienda usar microinversores o ingresar un inversor de mayor potencia manualmente.")
+            inversores_compatibles = {k: v for k, v in INVERTER_CATALOG.items() if v["tipo"] == "micro"}
+
+        inv_sel = st.selectbox("Inversor Compatible (Filtrado por Potencia)", list(inversores_compatibles.keys()))
+        i_spec = inversores_compatibles[inv_sel]
     else:
         st.caption("Ficha técnica del Inversor / Microinversor:")
-        tipo_inv = st.radio("Tipo de Dispositivo", ["Microinversor", "Inversor Central"], horizontal=True)
+        tipo_inv = st.radio("Tipo de Dispositivo", ["Inversor Central", "Microinversor"], horizontal=True)
         col_i1, col_i2 = st.columns(2)
         with col_i1:
-            inv_sel = st.text_input("Marca y Modelo", value="", placeholder="Ej. Growatt MIN 3000TL-X")
-            pot_ca = st.number_input("Potencia Nominal CA (Watts)", min_value=0.0, value=None, placeholder="Ej. 3000")
+            inv_sel = st.text_input("Marca y Modelo", value="", placeholder="Ej. Growatt MIN 6000TL-X")
+            pot_ca = st.number_input("Potencia Nominal CA (Watts)", min_value=0.0, value=None, placeholder="Ej. 6000")
             vac_in = st.selectbox("Tensión CA (V)", [220, 127, 440], index=0)
             fases_in = st.selectbox("Fases CA", [2, 1, 3], index=0)
         with col_i2:
@@ -479,7 +505,7 @@ with col_b:
 
         i_spec = {
             "tipo": "micro" if tipo_inv == "Microinversor" else "central",
-            "potencia": pot_ca or 3000.0,
+            "potencia": pot_ca or 6000.0,
             "vac": vac_in,
             "fases": fases_in,
             "modulos_max": mod_max,
@@ -516,33 +542,47 @@ else:
     gen_bimestral = kwp_real * hsp * 60 * 0.80
     pct_cobertura = (gen_bimestral / consumo_bim) * 100.0
 
-    # 2. Análisis Financiero
+    # 2. VALIDACIÓN TÉCNICA DE SOBREDIMENSIONAMIENTO (RATIO DC/AC)
+    if i_spec["tipo"] == "micro":
+        topologia = "Microinversores"
+        n_inversores = math.ceil(n_paneles / i_spec["modulos_max"])
+        potencia_ca_total = n_inversores * i_spec["potencia"]
+    else:
+        topologia = "Inversor Central"
+        n_inversores = 1
+        potencia_ca_total = i_spec["potencia"]
+
+    ratio_dc_ac = (kwp_real * 1000.0) / potencia_ca_total if potencia_ca_total > 0 else 0
+
+    # REGLA DE BLOQUEO: Si el inversor tiene capacidad insuficiente (Ratio > 1.35)
+    if ratio_dc_ac > 1.35 and i_spec["tipo"] == "central":
+        st.error(
+            f"🚫 **ERROR DE DISEÑO: INVERSOR DE CAPACIDAD INSUFICIENTE**\n\n"
+            f"- Potencia Solar en Paneles: **{kwp_real:.2f} kWp** ({n_paneles} módulos de {p_spec['p_watts']}W)\n"
+            f"- Capacidad del Inversor seleccionado: **{potencia_ca_total/1000.0:.2f} kW**\n"
+            f"- Relación CD/CA resultante: **{ratio_dc_ac:.2f}** (El límite máximo admisible es **1.30 - 1.35**).\n\n"
+            f"👉 **Solución recomendada:** Selecciona un inversor de al menos **{math.ceil(kwp_real / 1.30):.0f} kW** (por ejemplo, un inversor de **5 kW o 6 kW**) o utiliza **microinversores** para evitar saturación y pérdida de garantía."
+        )
+        st.stop()  # Detiene la ejecución aquí para no generar cotizaciones erróneas
+
+    # 3. Análisis Financiero
     precio_kwh_calc = costo_kwh if (costo_kwh is not None and costo_kwh > 0) else 4.10
     ahorro_bimestral = min(gen_bimestral, consumo_bim) * precio_kwh_calc
     ahorro_anual = ahorro_bimestral * 6
 
-    # 3. Topología y Lógica Eléctrica Corregida
+    # 4. Topología y Lógica Eléctrica
+    vac = i_spec["vac"]
+    fases = i_spec.get("fases", 2)
+    es_tri = (fases == 3)
+
     if i_spec["tipo"] == "micro":
-        topologia = "Microinversores"
-        n_inversores = math.ceil(n_paneles / i_spec["modulos_max"])
-        vac = i_spec["vac"]
-        fases = i_spec.get("fases", 2)
-        es_tri = (fases == 3)
         config_strings = f"{n_inversores} Microinversores (Entrada individual por módulo)"
-        
         cal_cd = "Chicote MC4 12 AWG (Fab)"
         prot_cd = "Integrada en Micro"
         tub_cd = "Sin canalización CD (Techo)"
         caida_cd = 0.2
     else:
-        topologia = "Inversor Central"
-        n_inversores = 1
-        vac = i_spec["vac"]
-        fases = i_spec.get("fases", 2)
-        es_tri = (fases == 3)
-        
-        # LÓGICA DE STRINGS:
-        # Si son <= 8 paneles o Voc total <= 450V, van en 1 solo String para asegurar la ventana MPPT
+        # LÓGICA DE STRINGS EN INVERSOR CENTRAL:
         voc_total_est = n_paneles * p_spec["voc"]
         if n_paneles <= 8 or voc_total_est <= 450.0:
             strings = 1
@@ -553,7 +593,6 @@ else:
             paneles_por_string = math.ceil(n_paneles / 2)
             config_strings = f"2 Strings ({paneles_por_string} módulos c/u en serie)"
 
-        # Corriente por serie (NOM-001 Art. 690-8: Isc * 1.25 * 1.25)
         i_diseno_string = p_spec["isc"] * 1.25 * 1.25
         prot_cd_amp = seleccionar_proteccion(i_diseno_string)
         prot_cd = f"{prot_cd_amp}A Fusible CD (1000V)"
@@ -564,12 +603,12 @@ else:
         cal_cd = f"{cal_cd_calc} PV-Wire ({strings} par{'es' if strings > 1 else ''})"
         tub_cd = dimensionar_tuberia(cal_cd_calc, num_conductores=strings * 2)
 
-    # 4. Circuito CA
-    potencia_ca_total = min(kwp_real * 1000, n_inversores * i_spec["potencia"])
+    # 5. Circuito CA
+    potencia_ca_inyeccion = min(kwp_real * 1000, potencia_ca_total)
     if es_tri:
-        i_nom_ca = potencia_ca_total / (math.sqrt(3) * vac)
+        i_nom_ca = potencia_ca_inyeccion / (math.sqrt(3) * vac)
     else:
-        i_nom_ca = potencia_ca_total / vac
+        i_nom_ca = potencia_ca_inyeccion / vac
 
     i_diseno_ca = i_nom_ca * 1.25
     prot_ca_amp = seleccionar_proteccion(i_diseno_ca)
@@ -577,7 +616,7 @@ else:
     cal_ca, caida_ca = calcular_calibre(i_diseno_ca, dist_ca, vac, caida_max_pct=2.0, es_trifasico=es_tri)
     tub_ca = dimensionar_tuberia(cal_ca, num_conductores=fases + 1)
 
-    # 5. Inversión y ROI
+    # 6. Inversión y ROI
     subtotal = subtotal_manual if (subtotal_manual is not None and subtotal_manual > 0) else (kwp_real * 1000 * 21.5 / 1.16)
     iva = subtotal * 0.16
     total_sistema = subtotal + iva
@@ -594,6 +633,7 @@ else:
     m4.metric("Retorno (ROI)", f"{roi_anos:.1f} años", f"Tarifa: ${precio_kwh_calc:.2f}/kWh")
     m5.metric("Protección CA", f"{prot_ca_amp} A", f"Calibre: {cal_ca}")
 
+    st.caption(f"ℹ️ Relación de Sobredimensionamiento CD/CA: **{ratio_dc_ac:.2f}** | Inversor: **{potencia_ca_total/1000.0:.1f} kW CA**")
     st.write("---")
 
     # Datos para los PDFs
