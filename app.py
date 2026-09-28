@@ -532,26 +532,38 @@ else:
         prot_cd = "Integrada en Micro"
         tub_cd = "Sin canalización CD (Techo)"
         caida_cd = 0.2
-    else:
+   else:
         topologia = "Inversor Central"
         n_inversores = 1
         vac = i_spec["vac"]
         fases = i_spec.get("fases", 2)
         es_tri = (fases == 3)
-        num_mppt = max(1, i_spec.get("mppt_count", 2))
-        strings = num_mppt
-        paneles_por_string = math.ceil(n_paneles / strings)
-        config_strings = f"{strings} Strings ({paneles_por_string} módulos c/u en serie)"
+        
+        # LÓGICA INTELIGENTE DE STRINGS:
+        # Si la serie completa no rebasa 500V Voc, se mantiene en 1 SOLO STRING
+        # para asegurar que el voltaje entre perfecto en la ventana MPPT.
+        voc_total_est = n_paneles * p_spec["voc"]
+        if n_paneles <= 8 or voc_total_est <= 450.0:
+            strings = 1
+            paneles_por_string = n_paneles
+            config_strings = f"1 String de {n_paneles} módulos en serie (1 MPPT)"
+        else:
+            strings = 2
+            paneles_por_string = math.ceil(n_paneles / 2)
+            config_strings = f"2 Strings ({paneles_por_string} módulos c/u en serie)"
 
+        # Corriente por string (NOM-001 Art. 690-8: Isc * 1.25 * 1.25)
         i_diseno_string = p_spec["isc"] * 1.25 * 1.25
         prot_cd_amp = seleccionar_proteccion(i_diseno_string)
-        prot_cd = f"{prot_cd_amp}A Fusible CD (x{strings})"
+        prot_cd = f"{prot_cd_amp}A Fusible CD (1000V)"
         
+        # Voltaje real del string para el cálculo de caída de tensión
         v_string = paneles_por_string * p_spec["vmp"]
         dist_cd_calc = dist_cd if (dist_cd is not None and dist_cd > 0) else 15.0
-        cal_cd_calc, caida_cd = calcular_calibre(i_diseno_string, dist_cd_calc, v_string, caida_max_pct=1.5, es_trifasico=False)
-        cal_cd = f"{cal_cd_calc} PV-Wire ({strings} pares)"
-        tub_cd = dimensionar_tuberia(cal_cd_calc, num_conductores=strings*2)
+        
+        cal_cd_calc, caida_cd = calcular_calibre(i_diseno_string, dist_cd_calc, v_string, caida_max_pct=2.0, es_trifasico=False)
+        cal_cd = f"{cal_cd_calc} PV-Wire ({strings} par{'es' if strings > 1 else ''})"
+        tub_cd = dimensionar_tuberia(cal_cd_calc, num_conductores=strings * 2)
 
     # 4. Circuito CA
     potencia_ca_total = min(kwp_real * 1000, n_inversores * i_spec["potencia"])
