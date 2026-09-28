@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>CALCULADORA FV ZONA ZERO</title>
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Zona Zero FV" />
+  
+  <!-- Tailwind CSS & Lucide Icons -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- jsPDF & AutoTable para exportar PDF idéntico en el cliente (100% offline tras cargar) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type=number] { -moz-appearance: textfield; }
+    .card-shadow { box-shadow: 0 4px 14px 0 rgba(15, 23, 42, 0.08); }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen pb-16">
+
+  <!-- CABECERA PRINCIPAL -->
+  <header class="bg-slate-950/80 backdrop-blur border-b border-slate-800 sticky top-0 z-50 px-4 py-3">
+    <div class="max-w-6xl mx-auto flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <!-- Contenedor del logotipo -->
+        <div id="logo-preview-box" class="w-14 h-14 bg-slate-800 rounded-xl flex items-center justify-center border border-slate-700 overflow-hidden flex-shrink-0">
+          <img id="header-logo-img" src="logo.png" alt="Logo" class="max-w-full max-h-full object-contain" onerror="this.classList.add('hidden'); document.getElementById('logo-fallback-icon').classList.remove('hidden');" />
+          <span id="logo-fallback-icon" class="text-2xl hidden">⚡</span>
+        </div>
+        <div>
+          <h1 class="text-base sm:text-lg font-black tracking-tight text-white flex items-center gap-1.5">
+            CALCULADORA FV <span class="text-amber-400">ZONA ZERO</span>
+          </h1>
+          <p class="text-xs text-slate-400 font-medium hidden sm:block">All Engineering Solutions • NOM-001 Art. 690 & Presupuestos</p>
+          <p class="text-xs text-amber-400/90 font-medium sm:hidden">Modo Móvil Autónomo</p>
+        </div>
+      </div>
+
+      <!-- Selector de Logo Temporal si se desea cambiar -->
+      <label class="cursor-pointer text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition">
+        <span>🔄 Logo</span>
+        <input type="file" id="logo-uploader" accept="image/*" class="hidden" />
+      </label>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 pt-6 space-y-6">
+
+    <!-- SECCIÓN 1: FORMULARIO BÁSICO (GRID RESPONSIVO) -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+      <!-- COLUMNA A: DATOS DE CLIENTE Y SERVICIO -->
+      <section class="bg-slate-950/60 border border-slate-800 rounded-2xl p-5 card-shadow space-y-4">
+        <h2 class="text-sm font-bold uppercase tracking-wider text-amber-400 flex items-center gap-2 border-b border-slate-800 pb-2">
+          <span>1. Datos del Cliente & Servicio CFE</span>
+        </h2>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Folio Cotización</label>
+            <input type="text" id="in-folio" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400 transition" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Fecha</label>
+            <input type="date" id="in-fecha" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400 transition" />
+          </div>
+        </div>
+
+        <div class="space-y-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Nombre del Cliente / Empresa</label>
+            <input type="text" id="in-cliente" placeholder="Ej. Juan Pérez / Taller Industrial" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400 transition" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Ciudad (Autocompleta HSP & Inclinación)</label>
+            <select id="in-ciudad-select" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400 transition">
+              <!-- Llenado dinámico -->
+            </select>
+          </div>
+
+          <div id="box-ciudad-manual" class="hidden">
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Nombre de la Ciudad Personalizada</label>
+            <input type="text" id="in-ciudad-custom" placeholder="Ej. Monclova, Coahuila" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400 transition" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">HSP (hrs/día)</label>
+              <input type="number" step="0.1" id="in-hsp" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400 transition" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Inclinación (°)</label>
+              <input type="number" step="1" id="in-inc" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400 transition" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">RPU / No. de Servicio</label>
+              <input type="text" id="in-rpu" placeholder="12 dígitos del recibo" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400 transition" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Tipo de Acometida</label>
+              <select id="in-servicio-ca" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400 transition">
+                <option value="2F">Bifásico 2F-3H (220V/127V)</option>
+                <option value="1F">Monofásico 1F-2H (127V)</option>
+                <option value="3F">Trifásico 3F-4H (220V/127V)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 pt-1">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Consumo Bimestral (kWh)</label>
+              <input type="number" id="in-consumo" placeholder="Ej. 1450" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-amber-400 focus:outline-none focus:border-amber-400 transition" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Costo kWh ($ MXN)</label>
+              <input type="number" step="0.05" id="in-costo-kwh" placeholder="Ej. 4.10" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-emerald-400 focus:outline-none focus:border-amber-400 transition" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- COLUMNA B: EQUIPOS, INVERSORES Y DIMENSIONAMIENTO -->
+      <section class="bg-slate-950/60 border border-slate-800 rounded-2xl p-5 card-shadow space-y-4">
+        <h2 class="text-sm font-bold uppercase tracking-wider text-amber-400 flex items-center gap-2 border-b border-slate-800 pb-2">
+          <span>2. Equipamiento & Filtro Inteligente</span>
+        </h2>
+
+        <!-- SELECCIÓN DE PANELES -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-semibold text-slate-300">Módulo Fotovoltaico</label>
+            <label class="text-xs text-amber-400 flex items-center gap-1 cursor-pointer">
+              <input type="checkbox" id="check-panel-manual" class="rounded bg-slate-900 border-slate-700 text-amber-500" />
+              <span>Manual</span>
+            </label>
+          </div>
+
+          <div id="box-panel-cat">
+            <select id="in-panel-select" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400 transition">
+              <!-- Llenado dinámico -->
+            </select>
+          </div>
+
+          <div id="box-panel-manual" class="hidden grid grid-cols-3 gap-2 bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+            <div class="col-span-3">
+              <input type="text" id="m-panel-name" placeholder="Marca / Modelo" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white" />
+            </div>
+            <div>
+              <span class="text-[10px] text-slate-400">Pmp (W)</span>
+              <input type="number" id="m-panel-w" placeholder="630" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white" />
+            </div>
+            <div>
+              <span class="text-[10px] text-slate-400">Voc (V)</span>
+              <input type="number" step="0.1" id="m-panel-voc" placeholder="46.2" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white" />
+            </div>
+            <div>
+              <span class="text-[10px] text-slate-400">Vmp (V)</span>
+              <input type="number" step="0.1" id="m-panel-vmp" placeholder="38.5" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white" />
+            </div>
+            <div>
+              <span class="text-[10px] text-slate-400">Isc (A)</span>
+              <input type="number" step="0.1" id="m-panel-isc" placeholder="17.48" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white" />
+            </div>
+            <div>
+              <span class="text-[10px] text-slate-400">Imp (A)</span>
+              <input type="number" step="0.1" id="m-panel-imp" placeholder="16.36" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white" />
+            </div>
+          </div>
+        </div>
+
+        <hr class="border-slate-800" />
+
+        <!-- SELECCIÓN DE INVERSORES CON FILTRO DE POTENCIA -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-semibold text-slate-300">Inversor / Microinversor</label>
+            <label class="text-xs text-amber-400 flex items-center gap-1 cursor-pointer">
+              <input type="checkbox" id="check-inv-manual" class="rounded bg-slate-900 border-slate-700 text-amber-500" />
+              <span>Manual</span>
+            </label>
+          </div>
+
+          <div id="box-inv-cat">
+            <select id="in-inv-select" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400 transition">
+              <!-- Llenado con filtro dinámico -->
+            </select>
+          </div>
+
+          <div id="box-inv-manual" class="hidden space-y-2 bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+            <div class="flex gap-4 text-xs font-medium text-slate-300">
+              <label class="flex items-center gap-1.5"><input type="radio" name="m-tipo-inv" value="central" checked /> Inversor Central</label>
+              <label class="flex items-center gap-1.5"><input type="radio" name="m-tipo-inv" value="micro" /> Microinversor</label>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <input type="text" id="m-inv-name" placeholder="Marca y Modelo" class="col-span-2 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white" />
+              <div>
+                <span class="text-[10px] text-slate-400">Potencia CA (W)</span>
+                <input type="number" id="m-inv-w" placeholder="6000" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white" />
+              </div>
+              <div>
+                <span class="text-[10px] text-slate-400">Tensión CA (V)</span>
+                <select id="m-inv-vac" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white">
+                  <option value="220">220V</option>
+                  <option value="127">127V</option>
+                  <option value="440">440V</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <hr class="border-slate-800" />
+
+        <!-- DISTANCIAS Y COSTO -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Distancia CD (m)</label>
+            <input type="number" id="in-dist-cd" placeholder="15" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400 transition" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Distancia CA (m)</label>
+            <input type="number" id="in-dist-ca" placeholder="18" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400 transition" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Subtotal Manual del Proyecto ($ MXN antes de IVA)</label>
+          <input type="number" id="in-subtotal" placeholder="Ej. 75000.00" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-amber-400 focus:outline-none focus:border-amber-400 transition" />
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ALERTA DE ERROR POR SOBREDIMENSIONAMIENTO (BLOQUEO TÉCNICO) -->
+    <div id="box-error-ratio" class="hidden bg-rose-950/80 border border-rose-600 rounded-2xl p-4 text-rose-200 space-y-1">
+      <div class="flex items-center gap-2 font-bold text-rose-400">
+        <span class="text-xl">🚫</span>
+        <span>ERROR TÉCNICO: INVERSOR DE CAPACIDAD INSUFICIENTE</span>
+      </div>
+      <p id="msg-error-ratio" class="text-xs text-rose-300 leading-relaxed"></p>
+    </div>
+
+    <!-- SECCIÓN 2: RESULTADOS Y DASHBOARD DE CÁLCULO -->
+    <section id="box-resultados" class="hidden bg-slate-950/80 border border-slate-800 rounded-2xl p-5 card-shadow space-y-5">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h2 class="text-sm font-bold uppercase tracking-wider text-amber-400">3. Resultados del Dimensionamiento</h2>
+        <span id="badge-ratio" class="text-xs px-2.5 py-1 rounded-full font-bold bg-slate-800 text-slate-300">Ratio DC/AC: 1.0</span>
+      </div>
+
+      <!-- TARJETAS MÉTRICAS -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-800">
+          <span class="text-[11px] text-slate-400 block font-medium">Paneles Solares</span>
+          <span id="res-paneles" class="text-lg font-black text-white">0 piezas</span>
+          <span id="res-kwp" class="text-xs text-amber-400 block font-semibold">0.00 kWp</span>
+        </div>
+
+        <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-800">
+          <span class="text-[11px] text-slate-400 block font-medium">Generación Bim.</span>
+          <span id="res-gen" class="text-lg font-black text-white">0 kWh</span>
+          <span id="res-cobertura" class="text-xs text-emerald-400 block font-semibold">0% cubierto</span>
+        </div>
+
+        <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-800">
+          <span class="text-[11px] text-slate-400 block font-medium">Ahorro Bimestral</span>
+          <span id="res-ahorro-bim" class="text-lg font-black text-amber-400">$0 MXN</span>
+          <span id="res-ahorro-anual" class="text-xs text-slate-400 block font-semibold">$0 / año</span>
+        </div>
+
+        <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-800">
+          <span class="text-[11px] text-slate-400 block font-medium">Retorno (ROI)</span>
+          <span id="res-roi" class="text-lg font-black text-emerald-400">0.0 años</span>
+          <span class="text-xs text-slate-400 block font-semibold">Periodo simple</span>
+        </div>
+
+        <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-800 col-span-2 sm:col-span-1">
+          <span class="text-[11px] text-slate-400 block font-medium">Protección CA</span>
+          <span id="res-prot-ca" class="text-lg font-black text-sky-400">0 A</span>
+          <span id="res-cal-ca" class="text-xs text-slate-300 block font-semibold">Cal: -</span>
+        </div>
+      </div>
+
+      <!-- DESGLOSE TÉCNICO ELÉCTRICO NOM-001 -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+        <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-800/80 space-y-1.5 text-xs">
+          <div class="font-bold text-amber-400 text-sm flex items-center justify-between">
+            <span>Circuito Corriente Directa (CD)</span>
+            <span id="res-config-strings" class="text-xs text-slate-400 font-normal"></span>
+          </div>
+          <p><span class="text-slate-400">Conductor:</span> <strong id="res-cal-cd" class="text-white"></strong></p>
+          <p><span class="text-slate-400">Canalización:</span> <strong id="res-tub-cd" class="text-white"></strong></p>
+          <p><span class="text-slate-400">Protección CD:</span> <strong id="res-prot-cd" class="text-white"></strong></p>
+          <p><span class="text-slate-400">Caída de Tensión:</span> <strong id="res-caida-cd" class="text-white"></strong></p>
+        </div>
+
+        <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-800/80 space-y-1.5 text-xs">
+          <div class="font-bold text-sky-400 text-sm flex items-center justify-between">
+            <span>Circuito Corriente Alterna (CA)</span>
+            <span id="res-tecnologia-inv" class="text-xs text-slate-400 font-normal"></span>
+          </div>
+          <p><span class="text-slate-400">Conductor:</span> <strong id="res-cal-ca-detail" class="text-white"></strong></p>
+          <p><span class="text-slate-400">Canalización:</span> <strong id="res-tub-ca" class="text-white"></strong></p>
+          <p><span class="text-slate-400">Protección Termomagnética:</span> <strong id="res-prot-ca-detail" class="text-white"></strong></p>
+          <p><span class="text-slate-400">Caída de Tensión:</span> <strong id="res-caida-ca" class="text-white"></strong></p>
+        </div>
+      </div>
+
+      <!-- BOTONES DE DESCARGA PDF (100% OFFLINE) -->
+      <div class="pt-4 border-t border-slate-800 flex flex-col sm:flex-row gap-3">
+        <button id="btn-pdf-cotizacion" class="flex-1 bg-amber-500 hover:bg-amber-400 active:scale-[0.99] text-slate-950 font-black text-sm py-3.5 px-4 rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20">
+          <span>📑</span>
+          <span>Descargar SOLO Cotización (1 Hoja con Logo)</span>
+        </button>
+
+        <button id="btn-pdf-memoria" class="flex-1 bg-slate-800 hover:bg-slate-700 active:scale-[0.99] text-white font-bold text-sm py-3.5 px-4 rounded-xl border border-slate-700 transition flex items-center justify-center gap-2">
+          <span>📘</span>
+          <span>Descargar Memoria Técnica NOM-001 Art. 690</span>
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- JAVASCRIPT: MOTOR COMPLETO DE CÁLCULO Y GENERACIÓN DE PDF -->
+  <script>
+    // 1. BASES DE DATOS Y TABLAS
+    const CIUDADES_SOLAR = {
+      "Saltillo, Coahuila": { hsp: 5.6, inc: 25.4 },
+      "Ramos Arizpe, Coahuila": { hsp: 5.6, inc: 25.5 },
+      "Arteaga, Coahuila": { hsp: 5.5, inc: 25.4 },
+      "Torreón, Coahuila": { hsp: 5.9, inc: 25.5 },
+      "Monclova, Coahuila": { hsp: 5.5, inc: 26.9 },
+      "Piedras Negras, Coahuila": { hsp: 5.3, inc: 28.7 },
+      "Monterrey, Nuevo León": { hsp: 5.2, inc: 25.6 },
+      "San Pedro Garza García, NL": { hsp: 5.2, inc: 25.6 },
+      "Guadalajara, Jalisco": { hsp: 5.7, inc: 20.6 },
+      "Ciudad de México (CDMX)": { hsp: 5.0, inc: 19.4 },
+      "Querétaro, Querétaro": { hsp: 5.5, inc: 20.6 },
+      "San Luis Potosí, SLP": { hsp: 5.7, inc: 22.1 },
+      "Hermosillo, Sonora": { hsp: 6.2, inc: 29.0 },
+      "Chihuahua, Chihuahua": { hsp: 5.8, inc: 28.6 },
+      "Mérida, Yucatán": { hsp: 5.3, inc: 20.9 },
+      "Personalizado / Manual": { hsp: 5.5, inc: 25.0 }
+    };
+
+    const PANEL_CATALOG = {
+      "Tier 1 630W Alto Rendimiento (Vmp: 38.5V, Imp: 16.36A, Voc: 46.2V, Isc: 17.48A)": {
+        p_watts: 630, vmp: 38.5, imp: 16.36, voc: 46.2, isc: 17.48
+      },
+      "Osda 550W Bifacial (Vmp: 42.1V, Imp: 13.06A, Voc: 49.8V, Isc: 13.98A)": {
+        p_watts: 550, vmp: 42.1, imp: 13.06, voc: 49.8, isc: 13.98
+      },
+      "Tier 1 580W Monocristalino (Vmp: 42.8V, Imp: 13.55A, Voc: 51.2V, Isc: 14.32A)": {
+        p_watts: 580, vmp: 42.8, imp: 13.55, voc: 51.2, isc: 14.32
+      },
+      "Tier 1 660W Alto Rendimiento (Vmp: 38.3V, Imp: 17.23A, Voc: 45.9V, Isc: 18.25A)": {
+        p_watts: 660, vmp: 38.3, imp: 17.23, voc: 45.9, isc: 18.25
+      }
+    };
+
+    const INVERTER_CATALOG = {
+      "Inversor Central Growatt MIN 3000TL-X (220V, 2 MPPT, 3000W)": {
+        tipo: "central", potencia: 3000, vac: 220, fases: 2, mppt_count: 2
+      },
+      "Inversor Central Growatt MIN 5000TL-X (220V, 2 MPPT, 5000W)": {
+        tipo: "central", potencia: 5000, vac: 220, fases: 2, mppt_count: 2
+      },
+      "Inversor Central Growatt MIN 6000TL-X (220V, 2 MPPT, 6000W)": {
+        tipo: "central", potencia: 6000, vac: 220, fases: 2, mppt_count: 2
+      },
+      "Inversor Central Solis 10kW Trifásico (3F 220V CA, 10000W)": {
+        tipo: "central", potencia: 10000, vac: 220, fases: 3, mppt_count: 2
+      },
+      "Microinversor Hoymiles HMS-2000-4T (4 MPPT Indep, 2000W, 220V CA)": {
+        tipo: "micro", potencia: 2000, vac: 220, modulos_max: 4, fases: 2, mppt_count: 4
+      },
+      "Microinversor Hoymiles HMT-2250-6T (Trifásico 220V CA, 2250W)": {
+        tipo: "micro", potencia: 2250, vac: 220, modulos_max: 6, fases: 3, mppt_count: 3
+      }
+    };
+
+    const TABLA_CONDUCTORES = [
+      { calibre: "14 AWG", ampacidad: 20, resistencia: 10.1 },
+      { calibre: "12 AWG", ampacidad: 25, resistencia: 6.36 },
+      { calibre: "10 AWG", ampacidad: 35, resistencia: 3.99 },
+      { calibre: "8 AWG",  ampacidad: 50, resistencia: 2.56 },
+      { calibre: "6 AWG",  ampacidad: 65, resistencia: 1.61 },
+      { calibre: "4 AWG",  ampacidad: 85, resistencia: 1.01 },
+      { calibre: "2 AWG",  ampacidad: 115, resistencia: 0.636 },
+      { calibre: "1/0 AWG", ampacidad: 150, resistencia: 0.399 }
+    ];
+
+    const PROTECCIONES_ESTANDAR = [15, 20, 25, 30, 40, 50, 60, 70, 80, 100, 125, 150];
+
+    let cachedLogoBase64 = null;
+    let globalCalcData = null;
+
+    // 2. INICIALIZACIÓN
+    document.addEventListener("DOMContentLoaded", () => {
+      // Fecha por defecto hoy y folio automático
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      document.getElementById("in-fecha").value = `${yyyy}-${mm}-${dd}`;
+      document.getElementById("in-folio").value = `ZZ-${yyyy}${mm}-01`;
+
+      // Cargar ciudades
+      const selCiudad = document.getElementById("in-ciudad-select");
+      Object.keys(CIUDADES_SOLAR).forEach(c => {
+        const opt = document.createElement("option");
+        opt.value = c;
+        opt.textContent = c;
+        selCiudad.appendChild(opt);
+      });
+      actualizarDatosCiudad();
+
+      // Cargar paneles
+      const selPanel = document.getElementById("in-panel-select");
+      Object.keys(PANEL_CATALOG).forEach(p => {
+        const opt = document.createElement("option");
+        opt.value = p;
+        opt.textContent = p;
+        selPanel.appendChild(opt);
+      });
+
+      // Intentar cargar logo.png en base64 desde almacenamiento o archivo
+      cargarLogoPredeterminado();
+
+      // Listeners de eventos
+      selCiudad.addEventListener("change", actualizarDatosCiudad);
+      document.getElementById("in-consumo").addEventListener("input", recalcularTodo);
+      document.getElementById("in-costo-kwh").addEventListener("input", recalcularTodo);
+      document.getElementById("in-hsp").addEventListener("input", recalcularTodo);
+      document.getElementById("in-inc").addEventListener("input", recalcularTodo);
+      document.getElementById("in-panel-select").addEventListener("change", recalcularTodo);
+      document.getElementById("in-inv-select").addEventListener("change", recalcularTodo);
+      document.getElementById("in-dist-cd").addEventListener("input", recalcularTodo);
+      document.getElementById("in-dist-ca").addEventListener("input", recalcularTodo);
+      document.getElementById("in-subtotal").addEventListener("input", recalcularTodo);
+      document.getElementById("in-servicio-ca").addEventListener("change", recalcularTodo);
+
+      // Toggles de manual
+      document.getElementById("check-panel-manual").addEventListener("change", (e) => {
+        document.getElementById("box-panel-cat").classList.toggle("hidden", e.target.checked);
+        document.getElementById("box-panel-manual").classList.toggle("hidden", !e.target.checked);
+        recalcularTodo();
+      });
+
+      document.getElementById("check-inv-manual").addEventListener("change", (e) => {
+        document.getElementById("box-inv-cat").classList.toggle("hidden", e.target.checked);
+        document.getElementById("box-inv-manual").classList.toggle("hidden", !e.target.checked);
+        recalcularTodo();
+      });
+
+      // Uploader de logo local
+      document.getElementById("logo-uploader").addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (evt) => {
+            cachedLogoBase64 = evt.target.result;
+            const imgEl = document.getElementById("header-logo-img");
+            imgEl.src = cachedLogoBase64;
+            imgEl.classList.remove("hidden");
+            document.getElementById("logo-fallback-icon").classList.add("hidden");
+            localStorage.setItem("zona_zero_logo_cache", cachedLogoBase64);
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+
+      // Botones PDF
+      document.getElementById("btn-pdf-cotizacion").addEventListener("click", () => generarPdf("cotizacion"));
+      document.getElementById("btn-pdf-memoria").addEventListener("click", () => generarPdf("memoria"));
+    });
+
+    function cargarLogoPredeterminado() {
+      const stored = localStorage.getItem("zona_zero_logo_cache");
+      if (stored) {
+        cachedLogoBase64 = stored;
+        const imgEl = document.getElementById("header-logo-img");
+        imgEl.src = stored;
+        imgEl.classList.remove("hidden");
+        document.getElementById("logo-fallback-icon").classList.add("hidden");
+      } else {
+        const img = new Image();
+        img.crossOrigin = "Anonymous";
+        img.onload = function() {
+          const canvas = document.createElement("canvas");
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0);
+          cachedLogoBase64 = canvas.toDataURL("image/png");
+        };
+        img.src = "logo.png";
+      }
+    }
+
+    function actualizarDatosCiudad() {
+      const sel = document.getElementById("in-ciudad-select").value;
+      const boxCustom = document.getElementById("box-ciudad-manual");
+      if (sel === "Personalizado / Manual") {
+        boxCustom.classList.remove("hidden");
+        document.getElementById("in-hsp").value = 5.5;
+        document.getElementById("in-inc").value = 25.0;
+      } else {
+        boxCustom.classList.add("hidden");
+        document.getElementById("in-hsp").value = CIUDADES_SOLAR[sel].hsp;
+        document.getElementById("in-inc").value = CIUDADES_SOLAR[sel].inc;
+      }
+      recalcularTodo();
+    }
+
+    function obtenerEspecificacionesPanel() {
+      const esManual = document.getElementById("check-panel-manual").checked;
+      if (!esManual) {
+        const sel = document.getElementById("in-panel-select").value;
+        return { nombre: sel, spec: PANEL_CATALOG[sel] };
+      }
+      const nombre = document.getElementById("m-panel-name").value || "Panel Personalizado";
+      const w = parseFloat(document.getElementById("m-panel-w").value) || 630;
+      const voc = parseFloat(document.getElementById("m-panel-voc").value) || 46.2;
+      const vmp = parseFloat(document.getElementById("m-panel-vmp").value) || 38.5;
+      const isc = parseFloat(document.getElementById("m-panel-isc").value) || 17.48;
+      const imp = parseFloat(document.getElementById("m-panel-imp").value) || 16.36;
+      return {
+        nombre: `${nombre} (${w}W)`,
+        spec: { p_watts: w, voc, vmp, isc, imp }
+      };
+    }
+
+    function obtenerEspecificacionesInversor() {
+      const esManual = document.getElementById("check-inv-manual").checked;
+      if (!esManual) {
+        const sel = document.getElementById("in-inv-select").value;
+        return { nombre: sel, spec: INVERTER_CATALOG[sel] };
+      }
+      const tipo = document.querySelector('input[name="m-tipo-inv"]:checked').value;
+      const nombre = document.getElementById("m-inv-name").value || (tipo === "micro" ? "Microinversor Genérico" : "Inversor Central Genérico");
+      const w = parseFloat(document.getElementById("m-inv-w").value) || 6000;
+      const vac = parseInt(document.getElementById("m-inv-vac").value) || 220;
+      return {
+        nombre: nombre,
+        spec: {
+          tipo: tipo,
+          potencia: w,
+          vac: vac,
+          fases: vac === 440 ? 3 : 2,
+          modulos_max: tipo === "micro" ? 4 : 24,
+          mppt_count: tipo === "micro" ? 4 : 2
+        }
+      };
+    }
+
+    function actualizarCatalogoInversoresFiltrado(potenciaKwp) {
+      const selInv = document.getElementById("in-inv-select");
+      const valorPrevio = selInv.value;
+      selInv.innerHTML = "";
+
+      Object.entries(INVERTER_CATALOG).forEach(([nombre, inv]) => {
+        if (inv.tipo === "micro") {
+          const opt = document.createElement("option");
+          opt.value = nombre;
+          opt.textContent = nombre;
+          selInv.appendChild(opt);
+        } else {
+          // Filtro: inversor * 1.30 >= potencia en paneles
+          const potInvKw = inv.potencia / 1000.0;
+          if ((potInvKw * 1.30) >= (potenciaKwp * 0.95)) {
+            const opt = document.createElement("option");
+            opt.value = nombre;
+            opt.textContent = nombre;
+            selInv.appendChild(opt);
+          }
+        }
+      });
+
+      if (selInv.querySelector(`option[value="${valorPrevio}"]`)) {
+        selInv.value = valorPrevio;
+      }
+    }
+
+    function seleccionarProteccion(corrienteDiseno) {
+      for (let amp of PROTECCIONES_ESTANDAR) {
+        if (amp >= corrienteDiseno) return amp;
+      }
+      return PROTECCIONES_ESTANDAR[PROTECCIONES_ESTANDAR.length - 1];
+    }
+
+    function calcularCalibre(corrienteDiseno, longitudM, tensionV, caidaMaxPct = 2.0, esTrifasico = false) {
+      for (let cond of TABLA_CONDUCTORES) {
+        if (cond.ampacidad >= corrienteDiseno) {
+          const factor = esTrifasico ? Math.sqrt(3) : 2.0;
+          const rTotal = (cond.resistencia / 1000.0) * longitudM;
+          const caidaV = factor * corrienteDiseno * rTotal;
+          const caidaPct = (caidaV / tensionV) * 100.0;
+          if (caidaPct <= caidaMaxPct) {
+            return { calibre: cond.calibre, caidaPct: caidaPct };
+          }
+        }
+      }
+      return { calibre: TABLA_CONDUCTORES[TABLA_CONDUCTORES.length - 1].calibre, caidaPct: 2.0 };
+    }
+
+    function dimensionarTuberia(calibre, numConductores = 3) {
+      if (["14 AWG", "12 AWG", "10 AWG"].includes(calibre)) {
+        return numConductores <= 4 ? '3/4" Conduit EMT' : '1" Conduit EMT';
+      } else if (["8 AWG", "6 AWG"].includes(calibre)) {
+        return '1" Conduit EMT';
+      } else {
+        return '1 1/4" Conduit RMC';
+      }
+    }
+
+    // 3. MOTOR CENTRAL DE CÁLCULO
+    function recalcularTodo() {
+      const consumoBim = parseFloat(document.getElementById("in-consumo").value);
+      const hsp = parseFloat(document.getElementById("in-hsp").value);
+      const costoKwh = parseFloat(document.getElementById("in-costo-kwh").value) || 4.10;
+      const distCa = parseFloat(document.getElementById("in-dist-ca").value) || 18.0;
+      const distCd = parseFloat(document.getElementById("in-dist-cd").value) || 15.0;
+      const subtotalManual = parseFloat(document.getElementById("in-subtotal").value);
+
+      const boxError = document.getElementById("box-error-ratio");
+      const boxRes = document.getElementById("box-resultados");
+
+      if (!consumoBim || consumoBim <= 0 || !hsp || hsp <= 0) {
+        boxRes.classList.add("hidden");
+        boxError.classList.add("hidden");
+        return;
+      }
+
+      const panelData = obtenerEspecificacionesPanel();
+      const pSpec = panelData.spec;
+
+      // 1. Potencia requerida
+      const consumoDiario = consumoBim / 60.0;
+      const potenciaPicoKw = consumoDiario / (hsp * 0.80);
+      const nPaneles = Math.ceil((potenciaPicoKw * 1000) / pSpec.p_watts);
+      const kwpReal = (nPaneles * pSpec.p_watts) / 1000.0;
+      const genBimestral = kwpReal * hsp * 60 * 0.80;
+      const pctCobertura = (genBimestral / consumoBim) * 100.0;
+
+      // Actualizar opciones compatibles de inversor
+      if (!document.getElementById("check-inv-manual").checked) {
+        actualizarCatalogoInversoresFiltrado(kwpReal);
+      }
+
+      const invData = obtenerEspecificacionesInversor();
+      if (!invData || !invData.spec) return;
+      const iSpec = invData.spec;
+
+      let topologia = "";
+      let nInversores = 1;
+      let potenciaCaTotal = 0;
+
+      if (iSpec.tipo === "micro") {
+        topologia = "Microinversores";
+        nInversores = Math.ceil(nPaneles / (iSpec.modulos_max || 4));
+        potenciaCaTotal = nInversores * iSpec.potencia;
+      } else {
+        topologia = "Inversor Central";
+        nInversores = 1;
+        potenciaCaTotal = iSpec.potencia;
+      }
+
+      const ratioDcAc = (kwpReal * 1000.0) / potenciaCaTotal;
+
+      // VALIDACIÓN: BLOQUEO POR SOBREDIMENSIONAMIENTO > 1.35
+      if (ratioDcAc > 1.35 && iSpec.tipo === "central") {
+        boxError.classList.remove("hidden");
+        boxRes.classList.add("hidden");
+        document.getElementById("msg-error-ratio").innerHTML = `
+          Potencia en Paneles: <strong>${kwpReal.toFixed(2)} kWp</strong> (${nPaneles} módulos de ${pSpec.p_watts}W)<br/>
+          Capacidad del Inversor Seleccionado: <strong>${(potenciaCaTotal/1000).toFixed(1)} kW</strong><br/>
+          Relación CD/CA: <strong>${ratioDcAc.toFixed(2)}</strong> (Máximo permitido: <strong>1.30 - 1.35</strong>).<br/>
+          <em>Por favor selecciona un inversor de al menos ${Math.ceil(kwpReal / 1.30)} kW o utiliza microinversores.</em>
+        `;
+        return;
+      } else {
+        boxError.classList.add("hidden");
+        boxRes.classList.remove("hidden");
+      }
+
+      // 2. Beneficios Financieros
+      const ahorroBim = Math.min(genBimestral, consumoBim) * costoKwh;
+      const ahorroAnual = ahorroBim * 6.0;
+
+      // 3. Cálculos Eléctricos CD
+      let configStrings = "";
+      let calCd = "";
+      let tubCd = "";
+      let protCd = "";
+      let caidaCd = 0.2;
+
+      if (iSpec.tipo === "micro") {
+        configStrings = `${nInversores} Microinversores (Entrada indep. por módulo)`;
+        calCd = "Chicote MC4 12 AWG (Fab)";
+        tubCd = "Sin canalización CD (Techo)";
+        protCd = "Integrada en Micro";
+        caidaCd = 0.2;
+      } else {
+        const vocTotalEst = nPaneles * pSpec.voc;
+        let strings = 1;
+        let panelesPorString = nPaneles;
+
+        if (nPaneles <= 8 || vocTotalEst <= 450.0) {
+          strings = 1;
+          panelesPorString = nPaneles;
+          configStrings = `1 String de ${nPaneles} módulos en serie (1 MPPT)`;
+        } else {
+          strings = 2;
+          panelesPorString = Math.ceil(nPaneles / 2);
+          configStrings = `2 Strings (${panelesPorString} módulos c/u en serie)`;
+        }
+
+        const iDisenoString = pSpec.isc * 1.25 * 1.25;
+        const protCdAmp = seleccionarProteccion(iDisenoString);
+        protCd = `${protCdAmp}A Fusible CD (1000V)`;
+
+        const vString = panelesPorString * pSpec.vmp;
+        const cCalc = calcularCalibre(iDisenoString, distCd, vString, 2.0, false);
+        calCd = `${cCalc.calibre} PV-Wire (${strings} par${strings > 1 ? 'es' : ''})`;
+        tubCd = dimensionarTuberia(cCalc.calibre, strings * 2);
+        caidaCd = cCalc.caidaPct;
+      }
+
+      // 4. Cálculos Eléctricos CA
+      const vac = iSpec.vac || 220;
+      const fases = iSpec.fases || 2;
+      const esTri = (fases === 3);
+
+      const potInyeccion = Math.min(kwpReal * 1000.0, potenciaCaTotal);
+      const iNomCa = esTri ? (potInyeccion / (Math.sqrt(3) * vac)) : (potInyeccion / vac);
+      const iDisenoCa = iNomCa * 1.25;
+
+      const protCaAmp = seleccionarProteccion(iDisenoCa);
+      const protCa = `${protCaAmp}A Termomagnético (${fases}P)`;
+
+      const cCaCalc = calcularCalibre(iDisenoCa, distCa, vac, 2.0, esTri);
+      const calCa = `${cCaCalc.calibre} THHN/THHW-LS`;
+      const tubCa = dimensionarTuberia(cCaCalc.calibre, fases + 1);
+      const caidaCa = cCaCalc.caidaPct;
+
+      // 5. Presupuesto
+      const subtotal = (subtotalManual && subtotalManual > 0) ? subtotalManual : ((kwpReal * 1000 * 21.5) / 1.16);
+      const iva = subtotal * 0.16;
+      const total = subtotal + iva;
+      const roi = ahorroAnual > 0 ? (total / ahorroAnual) : 0.0;
+
+      // Actualizar UI
+      document.getElementById("res-paneles").textContent = `${nPaneles} piezas`;
+      document.getElementById("res-kwp").textContent = `${kwpReal.toFixed(2)} kWp`;
+      document.getElementById("res-gen").textContent = `${Math.round(genBimestral).toLocaleString()} kWh`;
+      document.getElementById("res-cobertura").textContent = `${pctCobertura.toFixed(1)}% cubierto`;
+      document.getElementById("res-ahorro-bim").textContent = `$${Math.round(ahorroBim).toLocaleString()} MXN`;
+      document.getElementById("res-ahorro-anual").textContent = `$${Math.round(ahorroAnual).toLocaleString()} / año`;
+      document.getElementById("res-roi").textContent = `${roi.toFixed(1)} años`;
+      document.getElementById("res-prot-ca").textContent = `${protCaAmp} A`;
+      document.getElementById("res-cal-ca").textContent = `Cal: ${cCaCalc.calibre}`;
+
+      document.getElementById("badge-ratio").textContent = `Ratio DC/AC: ${ratioDcAc.toFixed(2)}`;
+      document.getElementById("badge-ratio").className = `text-xs px-2.5 py-1 rounded-full font-bold ${ratioDcAc > 1.25 ? 'bg-amber-900/60 text-amber-300 border border-amber-600' : 'bg-slate-800 text-slate-300'}`;
+
+      document.getElementById("res-config-strings").textContent = configStrings;
+      document.getElementById("res-cal-cd").textContent = calCd;
+      document.getElementById("res-tub-cd").textContent = tubCd;
+      document.getElementById("res-prot-cd").textContent = protCd;
+      document.getElementById("res-caida-cd").textContent = `${caidaCd.toFixed(2)}%`;
+
+      document.getElementById("res-tecnologia-inv").textContent = `${nInversores}x ${invData.nombre}`;
+      document.getElementById("res-cal-ca-detail").textContent = calCa;
+      document.getElementById("res-tub-ca").textContent = tubCa;
+      document.getElementById("res-prot-ca-detail").textContent = protCa;
+      document.getElementById("res-caida-ca").textContent = `${caidaCa.toFixed(2)}%`;
+
+      // Guardar objeto global para los generadores de PDF
+      const ciudadSel = document.getElementById("in-ciudad-select").value;
+      const ciudadFinal = ciudadSel === "Personalizado / Manual" ? (document.getElementById("in-ciudad-custom").value || "Sin especificar") : ciudadSel;
+
+      globalCalcData = {
+        folio: document.getElementById("in-folio").value || "S/F",
+        fecha: formatearFecha(document.getElementById("in-fecha").value),
+        cliente: document.getElementById("in-cliente").value || "Cliente Residencial / Comercial",
+        ciudad: ciudadFinal,
+        rpu: document.getElementById("in-rpu").value || "Sin especificar",
+        hsp: hsp,
+        inc: parseFloat(document.getElementById("in-inc").value) || 25.0,
+        kwp: kwpReal,
+        nPaneles: nPaneles,
+        panelNombre: panelData.nombre,
+        invNombre: invData.nombre,
+        topologia: topologia,
+        nInversores: nInversores,
+        vac: vac,
+        fases: fases,
+        configStrings: configStrings,
+        genBimestral: genBimestral,
+        pctCobertura: pctCobertura,
+        ahorroBim: ahorroBim,
+        ahorroAnual: ahorroAnual,
+        roi: roi,
+        calCd: calCd,
+        tubCd: tubCd,
+        protCd: protCd,
+        caidaCd: caidaCd,
+        calCa: calCa,
+        tubCa: tubCa,
+        protCa: protCa,
+        caidaCa: caidaCa,
+        subtotal: subtotal,
+        iva: iva,
+        total: total
+      };
+    }
+
+    function formatearFecha(fechaStr) {
+      if (!fechaStr) return new Date().toLocaleDateString('es-MX');
+      const partes = fechaStr.split("-");
+      if (partes.length === 3) return `${partes[2]}/${partes[1]}/${partes[0]}`;
+      return fechaStr;
+    }
+
+    // 4. GENERADORES PDF OFFLINE CON jsPDF
+    function generarPdf(tipo) {
+      if (!globalCalcData) {
+        alert("Por favor completa los datos de consumo bimestral para generar el documento.");
+        return;
+      }
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "letter" });
+      const d = globalCalcData;
+
+      // Ancho imprimible: 612 pt total, márgenes de 36 pt -> 540 pt útiles
+      const margin = 36;
+      let y = 34;
+
+      // Encabezado: Logo a la izquierda
+      if (cachedLogoBase64) {
+        try {
+          doc.addImage(cachedLogoBase64, "PNG", margin, y - 4, 150, 52, undefined, "FAST");
+        } catch (e) {
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(16);
+          doc.setTextColor(15, 23, 42);
+          doc.text("ZONA ZERO", margin, y + 20);
+        }
+      } else {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(16);
+        doc.setTextColor(15, 23, 42);
+        doc.text("ZONA ZERO", margin, y + 20);
+      }
+
+      // Folio y Fecha a la derecha
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8.5);
+      doc.setTextColor(15, 23, 42);
+      doc.text("ZONA ZERO 'ALL ENGINEERING SOLUTIONS'", 576, y + 6, { align: "right" });
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7.5);
+      doc.setTextColor(71, 85, 105);
+      doc.text("Saltillo, Coahuila | Soluciones Integrales de Ingeniería", 576, y + 18, { align: "right" });
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(15, 23, 42);
+      doc.text(`Folio: ${d.folio}   |   Fecha: ${d.fecha}`, 576, y + 30, { align: "right" });
+
+      y += 56;
+
+      if (tipo === "cotizacion") {
+        // TÍTULO FRONTAL
+        doc.setFillColor(30, 58, 138); // #1e3a8a
+        doc.rect(margin, y, 540, 16, "F");
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(7.5);
+        doc.setTextColor(255, 255, 255);
+        doc.text("COTIZACIÓN COMERCIAL - SISTEMA FOTOVOLTAICO INTERCONECTADO", 306, y + 11, { align: "center" });
+        y += 22;
+
+        // TABLA DATOS GENERALES
+        doc.autoTable({
+          startY: y,
+          margin: { left: margin, right: margin },
+          theme: 'grid',
+          styles: { fontSize: 7.5, cellPadding: 2.5, textColor: [30, 41, 59] },
+          headStyles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold' },
+          body: [
+            [
+              { content: "Cliente:", fontStyle: "bold", styles: { cellWidth: 70 } },
+              { content: d.cliente, styles: { cellWidth: 200 } },
+              { content: "Ubicación:", fontStyle: "bold", styles: { cellWidth: 70 } },
+              { content: d.ciudad, styles: { cellWidth: 200 } }
+            ],
+            [
+              { content: "RPU / CFE:", fontStyle: "bold" },
+              { content: d.rpu },
+              { content: "Tensión CA:", fontStyle: "bold" },
+              { content: `${d.vac}V (${d.fases} Fases)` }
+            ],
+            [
+              { content: "Potencia Total:", fontStyle: "bold" },
+              { content: `${d.kwp.toFixed(2)} kWp (${d.nPaneles} piezas)`, fontStyle: "bold" },
+              { content: "Inversor:", fontStyle: "bold" },
+              { content: `${d.nInversores}x ${d.invNombre}` }
+            ]
+          ]
+        });
+
+        y = doc.lastAutoTable.finalY + 8;
+
+        // 1. ANÁLISIS ENERGÉTICO Y ROI (ALTO IMPACTO)
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.setTextColor(30, 58, 138);
+        doc.text("1. Análisis Energético y Retorno de Inversión", margin, y);
+        y += 4;
+
+        doc.autoTable({
+          startY: y,
+          margin: { left: margin, right: margin },
+          theme: 'plain',
+          styles: {
+            fontSize: 7.5,
+            cellPadding: 4,
+            halign: 'center',
+            fillColor: [15, 23, 42] // #0f172a
+          },
+          head: [[
+            { content: "GENERACIÓN ESTIMADA", styles: { textColor: [148, 163, 184], fontStyle: "bold", fontSize: 6.8 } },
+            { content: "AHORRO BIMESTRAL", styles: { textColor: [148, 163, 184], fontStyle: "bold", fontSize: 6.8 } },
+            { content: "AHORRO ANUAL ESTIMADO", styles: { textColor: [148, 163, 184], fontStyle: "bold", fontSize: 6.8 } },
+            { content: "RETORNO DE INVERSIÓN", styles: { textColor: [148, 163, 184], fontStyle: "bold", fontSize: 6.8 } }
+          ]],
+          body: [[
+            { content: `${Math.round(d.genBimestral).toLocaleString()} kWh/bim`, styles: { textColor: [255, 255, 255], fontStyle: "bold", fontSize: 9 } },
+            { content: `$${d.ahorroBim.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})} MXN`, styles: { textColor: [251, 191, 36], fontStyle: "bold", fontSize: 9.5 } },
+            { content: `$${d.ahorroAnual.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})} MXN`, styles: { textColor: [251, 191, 36], fontStyle: "bold", fontSize: 9.5 } },
+            { content: `${d.roi.toFixed(1)} AÑOS`, styles: { textColor: [251, 191, 36], fontStyle: "bold", fontSize: 10 } }
+          ]]
+        });
+
+        y = doc.lastAutoTable.finalY + 8;
+
+        // 2. EQUIPAMIENTO
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.setTextColor(30, 58, 138);
+        doc.text("2. Equipamiento Seleccionado", margin, y);
+        y += 4;
+
+        doc.autoTable({
+          startY: y,
+          margin: { left: margin, right: margin },
+          theme: 'grid',
+          styles: { fontSize: 7.2, cellPadding: 2.5, textColor: [30, 41, 59] },
+          headStyles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold' },
+          head: [["Concepto", "Descripción Técnica", "Cant."]],
+          body: [
+            ["Módulos Solares", d.panelNombre, `${d.nPaneles}`],
+            ["Inversión / Conversión", `${d.invNombre} (${d.topologia})`, `${d.nInversores}`],
+            ["Estructura de Montaje", "Aluminio anodizado AL6005-T5 con tornillería de acero inoxidable", "1 Lote"]
+          ],
+          columnStyles: { 0: { cellWidth: 120 }, 1: { cellWidth: 370 }, 2: { cellWidth: 50, halign: 'center' } }
+        });
+
+        y = doc.lastAutoTable.finalY + 8;
+
+        // 3. ALCANCE
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.setTextColor(30, 58, 138);
+        doc.text("3. Alcance del Proyecto Llave en Mano", margin, y);
+        y += 4;
+
+        doc.autoTable({
+          startY: y,
+          margin: { left: margin, right: margin },
+          theme: 'plain',
+          styles: { fontSize: 7, cellPadding: 1.2, textColor: [51, 65, 85] },
+          body: [
+            ["• Suministro y montaje mecánico de módulos fotovoltaicos e inversores."],
+            ["• Cableado solar fotovoltaico CD (PV Wire) o troncal CA en tubería Conduit bajo NOM-001-SEDE-2012."],
+            ["• Gabinete de protección con interruptores termomagnéticos y supresor de transitorios (DPS)."],
+            ["• Sistema de puesta a tierra equipotencial con electrodo de cobre y conectores certificados."],
+            ["• Trámites de interconexión con CFE y pruebas de comisionamiento y puesta en marcha."]
+          ]
+        });
+
+        y = doc.lastAutoTable.finalY + 8;
+
+        // 4. INVERSIÓN
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.setTextColor(30, 58, 138);
+        doc.text("4. Resumen de Inversión", margin, y);
+        y += 4;
+
+        doc.autoTable({
+          startY: y,
+          margin: { left: margin, right: margin },
+          theme: 'grid',
+          styles: { fontSize: 7.5, cellPadding: 2.5, textColor: [15, 23, 42] },
+          body: [
+            [{ content: "SUBTOTAL", fontStyle: "bold" }, { content: `$${d.subtotal.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, halign: 'right', fontStyle: "bold" }],
+            [{ content: "I.V.A. (16%)", fontStyle: "bold" }, { content: `$${d.iva.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, halign: 'right', fontStyle: "bold" }],
+            [{ content: "INVERSIÓN TOTAL LLAVE EN MANO", fontStyle: "bold" }, { content: `$${d.total.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, halign: 'right', fontStyle: "bold" }]
+          ],
+          columnStyles: { 0: { cellWidth: 380, fillColor: [248, 250, 252] }, 1: { cellWidth: 160, fillColor: [241, 245, 249] } }
+        });
+
+        // ESPACIO AMPLIADO PARA FIRMAS AL PIE
+        y = doc.lastAutoTable.finalY + 36;
+
+        doc.autoTable({
+          startY: y,
+          margin: { left: margin, right: margin },
+          theme: 'plain',
+          styles: { fontSize: 7.5, halign: 'center', cellPadding: 1, textColor: [71, 85, 105] },
+          body: [
+            [
+              "____________________________________________\nZona Zero 'All Engineering Solutions'\nIngeniería y Proyectos",
+              `____________________________________________\nAceptación del Cliente\nFecha: ${d.fecha} | Firma`
+            ]
+          ]
+        });
+
+        doc.save(`Cotizacion_ZonaZero_${d.cliente.replace(/\s+/g, '_')}.pdf`);
+
+      } else {
+        // MEMORIA TÉCNICA
+        doc.setFillColor(30, 58, 138);
+        doc.rect(margin, y, 540, 16, "F");
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(7.5);
+        doc.setTextColor(255, 255, 255);
+        doc.text("MEMORIA TÉCNICA DE CÁLCULO ELÉCTRICO - NOM-001-SEDE-2012 ART. 690", 306, y + 11, { align: "center" });
+        y += 22;
+
+        doc.autoTable({
+          startY: y,
+          margin: { left: margin, right: margin },
+          theme: 'grid',
+          styles: { fontSize: 7.5, cellPadding: 3, textColor: [30, 41, 59] },
+          head: [["Parámetro de Sitio", "Valor Determinado", "Parámetro de Sistema", "Valor Determinado"]],
+          headStyles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold' },
+          body: [
+            ["Cliente:", d.cliente, "Potencia Pico (kWp):", `${d.kwp.toFixed(2)} kWp`],
+            ["Ubicación:", d.ciudad, "Inclinación Sugerida:", `${d.inc}° al Sur`],
+            ["HSP Promedio:", `${d.hsp} hrs/día`, "Generación Bimestral:", `${Math.round(d.genBimestral).toLocaleString()} kWh`],
+            ["RPU / CFE:", d.rpu, "Arreglo Strings / MPPT:", d.configStrings]
+          ]
+        });
+
+        y = doc.lastAutoTable.finalY + 12;
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.setTextColor(30, 58, 138);
+        doc.text("Memoria de Conductores, Canalizaciones y Protecciones (NOM-001)", margin, y);
+        y += 4;
+
+        doc.autoTable({
+          startY: y,
+          margin: { left: margin, right: margin },
+          theme: 'grid',
+          styles: { fontSize: 7.5, cellPadding: 4, textColor: [30, 41, 59] },
+          headStyles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold' },
+          head: [["Circuito", "Conductor Calculado", "Canalización", "Protección Sobrecorriente", "Caída %"]],
+          body: [
+            ["Lado CD (Generación)", d.calCd, d.tubCd, d.protCd, `${d.caidaCd.toFixed(2)}%`],
+            ["Lado CA (Interconexión)", d.calCa, d.tubCa, d.protCa, `${d.caidaCa.toFixed(2)}%`]
+          ],
+          columnStyles: { 0: { cellWidth: 80 }, 1: { cellWidth: 120 }, 2: { cellWidth: 150 }, 3: { cellWidth: 130 }, 4: { cellWidth: 60, halign: 'center' } }
+        });
+
+        y = doc.lastAutoTable.finalY + 14;
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.setTextColor(30, 58, 138);
+        doc.text("Criterios Normativos de Diseño Aplicados", margin, y);
+        y += 4;
+
+        doc.autoTable({
+          startY: y,
+          margin: { left: margin, right: margin },
+          theme: 'plain',
+          styles: { fontSize: 7.2, cellPadding: 2, textColor: [51, 65, 85] },
+          body: [
+            ["• Art. 690-8(a)(1): La corriente máxima por string se calcula como 1.25 × Isc."],
+            ["• Art. 690-8(b)(1): Dispositivos de sobrecorriente dimensionados al 125% de la corriente continua de diseño."],
+            ["• Art. 310-15: Conductores de cobre con aislamiento THHN/THHW-LS 75°C seleccionados por ampacidad y caída admisible <= 2.0%."],
+            ["• Capítulo 9, Tabla 1: Factor de ocupación de tubería conduit no mayor al 40% para 3 o más conductores en canalización."]
+          ]
+        });
+
+        doc.save(`Memoria_Tecnica_NOM_${d.cliente.replace(/\s+/g, '_')}.pdf`);
+      }
+    }
+  </script>
+</body>
+</html>
