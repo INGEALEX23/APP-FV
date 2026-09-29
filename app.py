@@ -449,39 +449,58 @@ with col_b:
 
     st.write("---")
 
-    # PRE-CÁLCULO DE POTENCIA PICO PARA FILTRO DE INVERSORES
-    # Permite saber cuántos kWp se demandan antes de mostrar el catálogo de inversores
+    # PRE-CÁLCULO TEÓRICO DE PANELES
+    n_paneles_teorico = 0
     potencia_est_kw = 0.0
-    n_paneles_est = 0
     if consumo_bim and consumo_bim > 0 and hsp and hsp > 0:
         c_diario_est = consumo_bim / 60.0
         p_pico_est = c_diario_est / (hsp * 0.80)
-        n_paneles_est = math.ceil((p_pico_est * 1000) / p_spec["p_watts"])
-        potencia_est_kw = (n_paneles_est * p_spec["p_watts"]) / 1000.0
+        n_paneles_teorico = math.ceil((p_pico_est * 1000) / p_spec["p_watts"])
+        potencia_est_kw = (n_paneles_teorico * p_spec["p_watts"]) / 1000.0
+
+    # SELECTOR DE CANTIDAD DE PANELES (EXACTO / PARES / MANUAL)
+    if n_paneles_teorico > 0:
+        st.write("##### ⚡ Selección de Cantidad de Módulos")
+        criterio_paneles = st.radio(
+            "Criterio de Arreglo de Paneles:",
+            ["Exacto Calculado", "Sugerir en Pares (Recomendado)", "Ajuste Manual Personalizado"],
+            horizontal=True
+        )
+
+        if criterio_paneles == "Exacto Calculado":
+            n_paneles = n_paneles_teorico
+        elif criterio_paneles == "Sugerir en Pares (Recomendado)":
+            n_paneles = n_paneles_teorico if n_paneles_teorico % 2 == 0 else n_paneles_teorico + 1
+            if n_paneles != n_paneles_teorico:
+                st.caption(f"💡 Se ajustó de {n_paneles_teorico} a **{n_paneles} módulos** para balancear circuitos y montaje.")
+        else:
+            n_paneles = st.number_input("Ingresa la cantidad exacta de módulos deseada:", min_value=1, value=n_paneles_teorico, step=1)
+        
+        # Potencia real con la cantidad seleccionada
+        potencia_est_kw = (n_paneles * p_spec["p_watts"]) / 1000.0
+    else:
+        n_paneles = 0
+
+    st.write("---")
 
     # 2. Inversor / Microinversor
     inv_manual = st.checkbox("⚙️ Ingresar Inversor / Microinversor manualmente", value=False)
     
     if not inv_manual:
-        # FILTRO INTELIGENTE DE INVERSORES SEGÚN POTENCIA PICO
         inversores_compatibles = {}
         for k_inv, v_inv in INVERTER_CATALOG.items():
             if v_inv["tipo"] == "micro":
-                # En microinversores se colocan tantas unidades como módulos existan
                 inversores_compatibles[k_inv] = v_inv
             else:
-                # En inversor central, la potencia del inversor debe admitir la potencia pico (Ratio DC/AC <= 1.30)
                 if potencia_est_kw > 0:
                     pot_inv_kw = v_inv["potencia"] / 1000.0
-                    # Admitido si potencia_inv * 1.30 >= potencia_cd
                     if (pot_inv_kw * 1.30) >= (potencia_est_kw * 0.95):
                         inversores_compatibles[k_inv] = v_inv
                 else:
                     inversores_compatibles[k_inv] = v_inv
 
         if not inversores_compatibles:
-            # Si el sistema es grande (ej. > 13 kWp) y supera los inversores de catálogo
-            st.warning(f"⚠️ El arreglo calculado ({potencia_est_kw:.2f} kWp) supera los inversores centrales estándar. Se recomienda usar microinversores o ingresar un inversor de mayor potencia manualmente.")
+            st.warning(f"⚠️ El arreglo seleccionado ({potencia_est_kw:.2f} kWp) supera los inversores centrales estándar. Se recomienda usar microinversores o ingresar un inversor de mayor potencia manualmente.")
             inversores_compatibles = {k: v for k, v in INVERTER_CATALOG.items() if v["tipo"] == "micro"}
 
         inv_sel = st.selectbox("Inversor Compatible (Filtrado por Potencia)", list(inversores_compatibles.keys()))
@@ -529,20 +548,17 @@ st.divider()
 # ==========================================
 campos_listos = (consumo_bim is not None and consumo_bim > 0 and 
                  hsp is not None and hsp > 0 and 
-                 dist_ca is not None)
+                 dist_ca is not None and n_paneles > 0)
 
 if not campos_listos:
     st.info("👋 Ingresa el consumo bimestral, las HSP y la distancia de CA para realizar el cálculo.")
 else:
-    # 1. Dimensionamiento Solar
-    consumo_diario = consumo_bim / 60.0
-    potencia_pico_kw = consumo_diario / (hsp * 0.80)
-    n_paneles = math.ceil((potencia_pico_kw * 1000) / p_spec["p_watts"])
+    # 1. Dimensionamiento Real
     kwp_real = (n_paneles * p_spec["p_watts"]) / 1000.0
     gen_bimestral = kwp_real * hsp * 60 * 0.80
     pct_cobertura = (gen_bimestral / consumo_bim) * 100.0
 
-    # 2. VALIDACIÓN TÉCNICA DE SOBREDIMENSIONAMIENTO (RATIO DC/AC)
+    # 2. Validación de Sobredimensionamiento (Ratio DC/AC)
     if i_spec["tipo"] == "micro":
         topologia = "Microinversores"
         n_inversores = math.ceil(n_paneles / i_spec["modulos_max"])
@@ -554,16 +570,15 @@ else:
 
     ratio_dc_ac = (kwp_real * 1000.0) / potencia_ca_total if potencia_ca_total > 0 else 0
 
-    # REGLA DE BLOQUEO: Si el inversor tiene capacidad insuficiente (Ratio > 1.35)
     if ratio_dc_ac > 1.35 and i_spec["tipo"] == "central":
         st.error(
             f"🚫 **ERROR DE DISEÑO: INVERSOR DE CAPACIDAD INSUFICIENTE**\n\n"
             f"- Potencia Solar en Paneles: **{kwp_real:.2f} kWp** ({n_paneles} módulos de {p_spec['p_watts']}W)\n"
             f"- Capacidad del Inversor seleccionado: **{potencia_ca_total/1000.0:.2f} kW**\n"
             f"- Relación CD/CA resultante: **{ratio_dc_ac:.2f}** (El límite máximo admisible es **1.30 - 1.35**).\n\n"
-            f"👉 **Solución recomendada:** Selecciona un inversor de al menos **{math.ceil(kwp_real / 1.30):.0f} kW** (por ejemplo, un inversor de **5 kW o 6 kW**) o utiliza **microinversores** para evitar saturación y pérdida de garantía."
+            f"👉 **Solución:** Selecciona un inversor de mayor capacidad o utiliza microinversores."
         )
-        st.stop()  # Detiene la ejecución aquí para no generar cotizaciones erróneas
+        st.stop()
 
     # 3. Análisis Financiero
     precio_kwh_calc = costo_kwh if (costo_kwh is not None and costo_kwh > 0) else 4.10
@@ -582,7 +597,6 @@ else:
         tub_cd = "Sin canalización CD (Techo)"
         caida_cd = 0.2
     else:
-        # LÓGICA DE STRINGS EN INVERSOR CENTRAL:
         voc_total_est = n_paneles * p_spec["voc"]
         if n_paneles <= 8 or voc_total_est <= 450.0:
             strings = 1
@@ -627,13 +641,13 @@ else:
     # ==========================================
     st.subheader("3. Resultados del Dimensionamiento")
     m1, m2, m3, m4, m5 = st.columns(5)
-    m1.metric("Paneles Necesarios", f"{n_paneles} módulos", f"{kwp_real:.2f} kWp")
+    m1.metric("Paneles Asignados", f"{n_paneles} módulos", f"{kwp_real:.2f} kWp")
     m2.metric("Generación Est.", f"{gen_bimestral:.0f} kWh/bim", f"{pct_cobertura:.1f}% cubierto")
     m3.metric("Ahorro Bimestral", f"${ahorro_bimestral:,.0f} MXN", f"${ahorro_anual:,.0f}/año")
     m4.metric("Retorno (ROI)", f"{roi_anos:.1f} años", f"Tarifa: ${precio_kwh_calc:.2f}/kWh")
     m5.metric("Protección CA", f"{prot_ca_amp} A", f"Calibre: {cal_ca}")
 
-    st.caption(f"ℹ️ Relación de Sobredimensionamiento CD/CA: **{ratio_dc_ac:.2f}** | Inversor: **{potencia_ca_total/1000.0:.1f} kW CA**")
+    st.caption(f"ℹ️ Relación CD/CA: **{ratio_dc_ac:.2f}** | Capacidad Inversor: **{potencia_ca_total/1000.0:.1f} kW CA**")
     st.write("---")
 
     # Datos para los PDFs
