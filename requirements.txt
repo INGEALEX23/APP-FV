@@ -1,3 +1,6 @@
-streamlit>=1.35.0
-reportlab>=4.1.0
-matplotlib>=3.8.0
+streamlit
+pandas
+reportlab
+openpyxl
+pillow
+st-gsheets-connection
